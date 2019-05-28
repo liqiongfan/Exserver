@@ -18,7 +18,6 @@
 #include <string.h>
 #include <assert.h>
 
-
 typedef struct sockaddr_in server_addr;
 
 int socket_create(int domain, int type, int protocol);

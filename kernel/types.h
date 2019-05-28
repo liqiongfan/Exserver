@@ -62,6 +62,6 @@ EXLIST *parse_query_string(const char *query_string);
 /* Generate http response string */
 char *generate_response_string(int code, char *msg, char *body, int n, ...);
 char *generate_request_string(char *method, char *url, char *body, int n, ...);
-#define EX_CON(all_size, total_size) &(all_size), &(total_size)
+#define EX_CON(all_size, total_size) (&(all_size)), (&(total_size))
 void _ex_strncat_(char **dest, const char *source, size_t *origin_size, size_t *used_num);
 #endif /* SOCKETS_TYPES_H */

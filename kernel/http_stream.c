@@ -28,7 +28,7 @@ char *exsubstr(const char *source, size_t start, size_t length, int mode)
     unsigned long _i;
     
     if ( source == NULL ) return NULL;
-    
+
     size_t left = 0, right = 0, source_len = strlen(source);
     if ( length > source_len ) length = source_len;
     
