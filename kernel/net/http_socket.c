@@ -148,6 +148,8 @@ void worker_process(int index, void (*callback)(int fd, EXLIST *header, char *me
 		{
 			for (epoll_index = 0; epoll_index < epoll_num; ++epoll_index)
 			{
+				/* before each setting */
+				keepalive = 0;
 #ifdef __linux__
 				if ( events[epoll_index].events & ( EPOLLRDHUP ) )
 #else
@@ -277,9 +279,6 @@ void worker_process(int index, void (*callback)(int fd, EXLIST *header, char *me
 								kevent(epoll_fd, &ev, 1, NULL, 0, &ts);
 #endif
 							} /* end if keepalive */
-
-							/* after each setting */
-							keepalive = 0;
 						}
 						else
 						{
