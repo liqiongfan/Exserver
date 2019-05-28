@@ -439,7 +439,10 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 #endif
 		if ( epoll_num )
 		{
-			for (_j = 0; _j < epoll_num; ++_j) {
+			for (_j = 0; _j < epoll_num; ++_j)
+			{
+				keepalive = 0;
+
 #ifdef __linux__
 				if ( events[_j].events & EPOLLRDHUP ) close(events[_j].data.fd);
 				if ( events[_j].events & ( EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLERR ) )
@@ -513,6 +516,7 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 										else if ( strncasecmp(HEADER_VALUE_P(header), "HTTP/1.1", 8) == 0 )
 										{
 											http_protocol = 1;
+											keepalive = 1;
 										}
 										else
 										{
@@ -530,12 +534,7 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 										}
 										else
 										{
-											if ( http_protocol == 1 )
-											{
-												keepalive = 1;
-											}
-											else
-												keepalive = 0;
+											keepalive = 0;
 										}
 									}
 								} EXLIST_FOREACH_END();
