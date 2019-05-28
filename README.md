@@ -6,6 +6,37 @@
 
 
 
+## 压测的源码
+
+```c
+#include "kernel/net/http_socket.h"
+#include "kernel/exlist.h"
+#include "kernel/types.h"
+#include "kernel/net/socket.h"
+
+void server_callback(int fd, EXLIST *header, char *request_method, char *request_url, int keep_alive)
+{
+	char *response;
+	if ( keep_alive )
+		response = generate_response_string(200, "OK", "World", 3, "Content-Type: text/html", "Content-Length: 5", "Connection: keep-alive");
+	else
+		response = generate_response_string(200, "OK", "hello", 3, "Content-Type: text/html", "Content-Length: 5", "Connection: close");
+	write(fd, response, strlen(response));
+	free(response);
+}
+
+int main(int argc, char *argv[])
+{
+	int server_fd;
+
+	server_fd = http_server_init("0.0.0.0", 8181, 1000);
+	generate_worker(3, server_callback);
+	master_process(server_fd);
+	
+	return 0;
+}
+```
+
 ## Apache ab 命令压测
 
 连接keep-alive情况下，由于Apache ab命令默认情况下是使用HTTP/1.0协议，因此默认情况下，每次请求都进行关闭，如果需要使用连接复用，需要添加 -k参数
