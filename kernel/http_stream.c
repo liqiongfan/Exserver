@@ -424,6 +424,7 @@ void send_404_response(int _fd)
 		"Content-Length: 9"
 	);
 	write(_fd, response, strlen(response));
+	free(response);
 }
 
 /* Generate the request string
