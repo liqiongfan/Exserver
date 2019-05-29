@@ -71,16 +71,7 @@ void server_callback(int fd, EXLIST *header, char *host, char *request_method, c
 
 	if ( !is_match )
 	{
-		char ttt[32];
-		sprintf(ttt, "Content-Length: %ld", strlen(match_root));
-		char *response = generate_response_string(
-			404, "Not Found", match_root,
-			2,
-			"Content-Type: text/html",
-			ttt
-		);
-		write(fd, response, strlen(response));
-		return ;
+		return send_404_response(fd);
 	}
 
 	/* if empty query string */
