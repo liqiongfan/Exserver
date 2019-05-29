@@ -570,7 +570,7 @@ print_exjson(EXJSON *exjson, int _num)
                 for (j = 0; j <= _num; ++j) {
                     printf("\t");
                 }
-				printf("%d\n", *(long *)EV_VALUE_P(temp));
+				printf("%ld\n", *(long *)EV_VALUE_P(temp));
                 break;
             case EXJSON_DOUBLE:
                 if ( EV_NAME_P(temp) == NULL )

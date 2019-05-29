@@ -33,10 +33,10 @@ void socket_bind_address(int _server_fd, const char *host, uint32_t port)
     
     addr.sin_port = htons(port);
     addr.sin_family = AF_INET;
-    // addr.sin_len = sizeof(server_addr);
     addr.sin_addr.s_addr = inet_addr(host);
     
     _result = bind(_server_fd, (struct sockaddr *)&addr, sizeof(server_addr));
+    if ( _result == -1 ) perror("Bind: ");
     assert(_result != -1);
 }
 

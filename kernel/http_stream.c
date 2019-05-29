@@ -25,7 +25,7 @@ EX_HTTP_HEADER *INIT_HEADER()
  * mode is 3: trim result both NOTE: The return value must be freed after used. */
 char *exsubstr(const char *source, size_t start, ssize_t length, int mode)
 {
-    unsigned long _i;
+    long _i;
     
     if ( source == NULL ) return NULL;
 
@@ -392,9 +392,11 @@ char *generate_response_string(int code, char *msg, char *body, int n, ...)
     _ex_strncat_(&response_stream, "\r\n", EX_CON(total_size, used_size));
 
     /* HTTP Content-Length */
-/*    memset(code_str, 0, sizeof(code_str));
+/*
+    memset(code_str, 0, sizeof(code_str));
     sprintf(code_str, "Content-Length: %ld\r\n", strlen(body));
-    _ex_strncat_(&response_stream, code_str, EX_CON(total_size, used_size));*/
+    _ex_strncat_(&response_stream, code_str, EX_CON(total_size, used_size));
+*/
     
     /* Add the HTTP headers */
     va_start(args, n);
@@ -522,13 +524,14 @@ char *get_file_data(char *filename)
     size_t total_size = 1, used_num = 0, str_len, all_seek_pos = 0;
     char temp_str[100], *result = malloc(sizeof(char));
     if ( result == NULL ) return NULL;
-
+    memset(result, 0, sizeof(char));
+    
     while ( true )
     {
         memset(temp_str, 0, sizeof(temp_str));
-        fread(temp_str, sizeof(char), sizeof(temp_str) - 2, fp);
+        fread(temp_str, sizeof(char), sizeof(temp_str) - 1, fp);
         str_len = strlen(temp_str);
-        all_seek_pos += str_len + 1;
+        all_seek_pos += str_len;
         if ( str_len == 0 ) break;
         fseek(fp, all_seek_pos, SEEK_SET);
         _ex_strncat_(&result, temp_str, EX_CON(total_size, used_num));
