@@ -5,6 +5,8 @@
 #include "kernel/types.h"
 #include "kernel/net/socket.h"
 
+#include <sys/resource.h>
+
 void server_callback(int fd, EXLIST *header, char *request_method, char *request_url, int keep_alive)
 {
 	char *response;
@@ -19,10 +21,9 @@ void server_callback(int fd, EXLIST *header, char *request_method, char *request
 int main(int argc, char *argv[])
 {
 	int server_fd;
-
-	server_fd = http_server_init("0.0.0.0", 8181, 1000);
+	server_fd = http_server_init("0.0.0.0", 8181, 20000);
 	generate_worker(3, server_callback);
 	master_process(server_fd);
-
+	
 	return 0;
 }

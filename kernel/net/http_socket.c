@@ -272,12 +272,7 @@ void worker_process(int index, void (*callback)(int fd, EXLIST *header, char *me
 							if (!keepalive)
 							{
 								shutdown(new_client_fd, SHUT_WR);
-#ifndef __linux__
-								memset(&ev, 0, sizeof(struct kevent));
-								ts.tv_sec = ts.tv_nsec = 0;
-								EV_SET(&ev, new_client_fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-								kevent(epoll_fd, &ev, 1, NULL, 0, &ts);
-#endif
+								close(new_client_fd);
 							} /* end if keepalive */
 						}
 						else
@@ -359,12 +354,18 @@ void master_process( int server_fd )
 #ifdef __linux__
 				if ( event[epoll_index].events & EPOLLIN )
 #else
-				if ( event[epoll_index].filter & EVFILT_READ )
+				if ( event[epoll_index].filter == EVFILT_READ )
 #endif
 				{
 					client_fd = accept(server_fd, NULL, NULL);
 					if ( client_fd )
 					{
+					    if ( client_fd == -1 )
+                        {
+					        perror("Accept: ");
+                            continue;
+                        }
+					    
 						/* if current request get the boundary of 1 million
 						 * reset it to zero and restart from zero */
 						if ( dispatch_index == 1000000 ) dispatch_index = 0;
@@ -389,7 +390,7 @@ void master_process( int server_fd )
  * This method is one process http server which runs the main thread */
 void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, char *, int ))
 {
-	int _j,                 /* epoll wait sum for iterator */
+	int _j, result = 0,     /* epoll wait sum for iterator */
 		keepalive = 0,      /* keep-alive or not */
 		http_protocol = 0,  /* http_protocol: 0(http/1.0) 1(http/1.1) 2(http/2.2)*/
 		epoll_fd,           /* epoll file descriptor */
@@ -402,6 +403,8 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 	size_t  start_pos = 0,  /* parsing http stream start position. */
 	        stream_length;  /* the http stream parsing result length, if start_pos equals to stream_length, means the parsing end. */
 
+    int all_num = 0;
+	   
 #ifdef __linux__
 	/* Using the epoll API */
 	epoll_fd = epoll_create(1);
@@ -419,10 +422,10 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 	epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &ev);
 
 #else
-	struct kevent ev, events[100];
+	struct kevent ev, events[EPOLL_KQUEUE_NUMBER];
 	struct timespec ts;
 	memset(&ev, 0, sizeof(struct kevent));
-	memset(events, 0, sizeof(struct kevent) * 100);
+	memset(events, 0, sizeof(struct kevent) * EPOLL_KQUEUE_NUMBER);
 
 	ts.tv_sec = ts.tv_nsec = 0;
 	EV_SET(&ev, server_fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
@@ -434,7 +437,7 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 #ifdef __linux__
 		epoll_num = epoll_wait(epoll_fd, events, 100, -1);
 #else
-		epoll_num = kevent(epoll_fd, NULL, 0, events, 100, NULL);
+		epoll_num = kevent(epoll_fd, NULL, 0, events, EPOLL_KQUEUE_NUMBER, NULL);
 #endif
 		if ( epoll_num )
 		{
@@ -446,7 +449,16 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 				if ( events[_j].events & EPOLLRDHUP ) close(events[_j].data.fd);
 				if ( events[_j].events & ( EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLERR ) )
 #else
-				if ( events[_j].flags == EV_ERROR || events[_j].flags == EV_EOF ) close(events[_j].ident);
+				if ( events[_j].flags == EV_ERROR || events[_j].flags == EV_EOF )
+                {
+				    close(events[_j].ident);
+                    memset(&ev, 0, sizeof(struct kevent));
+                    ts.tv_sec = ts.tv_nsec = 0;
+                    EV_SET(&ev, events[_j].ident, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+                    kevent(epoll_fd, &ev, 1, NULL, 0, &ts);
+                    continue;
+                }
+				if ( events[_j].filter == EVFILT_READ )
 #endif
 				{
 #ifdef __linux__
@@ -458,6 +470,11 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 						client_fd = accept(server_fd, NULL, NULL);
 						if ( client_fd )
 						{
+						    if ( client_fd == -1 )
+                            {
+						        perror("accept: ");
+                                continue;
+                            }
 							socket_nonblock(client_fd);
 #ifdef __linux__
 							memset(&ev, 0, sizeof(struct epoll_event));
@@ -481,7 +498,7 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 #endif
 
 						char *buff = get_socket_stream_data(client_fd, &stream_length);
-
+      
 						if ( buff )
 						{
 							start_pos = 0;
@@ -546,11 +563,12 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 								if ( start_pos == stream_length ) break;
 							}
 							free(buff);
-
+                            
 							/* if not keep alive the connection shutdown other than keep-alive */
 							if ( !keepalive )
 							{
 								shutdown(client_fd, SHUT_WR);
+								close(client_fd);
 							}
 						}
 						else

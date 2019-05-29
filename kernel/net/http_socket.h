@@ -21,7 +21,7 @@
 #define SOCKET_FD_LEN CMSG_LEN(sizeof(int))
 
 /* Macro defines epoll & kqueue events number */
-#define EPOLL_KQUEUE_NUMBER 50
+#define EPOLL_KQUEUE_NUMBER 100
 
 /* Maxnum of workers */
 #define MAX_WORKER_NUMBER 20
