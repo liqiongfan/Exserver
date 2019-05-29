@@ -16,18 +16,18 @@
 {
   "server": [
     {
-      "webroot": "/website/test",  // 配置网站一
-      "listen" : 8181,             // 服务器统一监听8181
+      "webroot": "/website/test",  // 配置网站一的根目录:/website/test
+      "listen" : 8181,             // www.money.com监听8181
       "host"   : "wwww.money.com"  // 监听的host
     },
     {
-      "webroot": "/website/novel", // 网站二
-      "listen" : 8181,
-      "host"   : "www.novel.com"
+      "webroot": "/website/novel", // 网站二的根目录:/website/novel
+      "listen" : 8182,             // www.novel.com监听8182
+      "host"   : "www.novel.com"   
     },
     {
-      "webroot": "/website/data",  // 网站三
-      "listen" : 8181,
+      "webroot": "/website/data",  // 网站三的根目录:/website/data
+      "listen" : 8183,             // www.data.com监听8183 
       "host"   : "www.data.com"
     }
   ]
