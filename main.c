@@ -119,6 +119,11 @@ void server_callback(int fd, EXLIST *header, char *host, char *request_method, c
 	free(response);
 }
 
+void delete_configs()
+{
+	destroy_exjson(configs);
+}
+
 int main(int argc, char *argv[])
 {
 	int server_fd;
@@ -126,6 +131,8 @@ int main(int argc, char *argv[])
 	server_fd = http_server_init("0.0.0.0", 8181, 20000);
 	generate_worker(3, server_callback);
 	master_process(server_fd);
+
+	atexit(delete_configs);
 
 	return 0;
 }
