@@ -23,13 +23,18 @@ EX_HTTP_HEADER *INIT_HEADER()
  * mode is 1: trim result string left
  * mode is 2: trim result string right
  * mode is 3: trim result both NOTE: The return value must be freed after used. */
-char *exsubstr(const char *source, size_t start, size_t length, int mode)
+char *exsubstr(const char *source, size_t start, ssize_t length, int mode)
 {
     unsigned long _i;
     
     if ( source == NULL ) return NULL;
 
     size_t left = 0, right = 0, source_len = strlen(source);
+    if ( length < 0 )
+    {
+        length = (-1) * length; start = source_len - length - 1;
+    }
+
     if ( length > source_len ) length = source_len;
     
     if ( TRIM_LEFT == mode || TRIM_BOTH == mode )
@@ -161,7 +166,7 @@ static void __free_http_header__(void *header)
  * if http_request_stream is invalid, return NULL, otherwise return the response data. */
 EXLIST *parse_http_stream(const char *http_request_stream, size_t *str_len)
 {
-    int http_method_kind = 0, body_empty = 0;
+    int http_method_kind = 0, body_empty = 0, set_colon = 0;
     size_t _i = *str_len, _colon_pos = 0, _content_length = 0;
     EXLIST *__list_data = INIT_EXLIST();
     EX_HTTP_HEADER *value_data;
@@ -216,9 +221,11 @@ EXLIST *parse_http_stream(const char *http_request_stream, size_t *str_len)
     for ( _i = _i_pos; _i < _http_stream_length; ++_i )
     {
         char current_char = http_request_stream[ _i ];
-        if ( current_char == ':' ) _colon_pos = _i + 1;
+        if ( current_char == ':' && !set_colon ) { _colon_pos = _i + 1; set_colon = 1; }
         if ( current_char == '\r' && http_request_stream[ _i + 1] == '\n' && _colon_pos )
         {
+	        set_colon = 0;
+
             if (http_request_stream[ _i + 2 ] != '\r' && http_request_stream[ _i + 3] != '\n')
             {
                 /* Request HTTP/VERSION */
@@ -366,7 +373,7 @@ _ex_strncat_(char **dest, const char *source, size_t *origin_size, size_t *used_
  * NOTE: return value need to be freed after used */
 char *generate_response_string(int code, char *msg, char *body, int n, ...)
 {
-    char code_str[5] = {0}, *header;
+    char code_str[35] = {0}, *header;
     va_list args;
     size_t total_size = 1, used_size = 0;
     char *response_stream = malloc(sizeof(char));
@@ -383,6 +390,11 @@ char *generate_response_string(int code, char *msg, char *body, int n, ...)
     /* HTTP status msg */
     _ex_strncat_(&response_stream, msg, EX_CON(total_size, used_size));
     _ex_strncat_(&response_stream, "\r\n", EX_CON(total_size, used_size));
+
+    /* HTTP Content-Length */
+/*    memset(code_str, 0, sizeof(code_str));
+    sprintf(code_str, "Content-Length: %ld\r\n", strlen(body));
+    _ex_strncat_(&response_stream, code_str, EX_CON(total_size, used_size));*/
     
     /* Add the HTTP headers */
     va_start(args, n);
@@ -402,12 +414,24 @@ char *generate_response_string(int code, char *msg, char *body, int n, ...)
     return response_stream;
 }
 
+/* Send HTTP 404 to the _fd parameter */
+void send_404_response(int _fd)
+{
+	char *response = generate_response_string(
+		404, "Not Found", "Not Found",
+		2,
+		"Content-Type: text/html",
+		"Content-Length: 9"
+	);
+	write(_fd, response, strlen(response));
+}
+
 /* Generate the request string
  * Parameter body's follower were http headers
  * NOTE: return value need to be freed after used */
 char *generate_request_string(char *method, char *url, char *body, int n, ...)
 {
-    char *header;
+    char *header, code_str[35] = {0};
     va_list args;
     size_t total_size = 1, used_size = 0;
     char *response_stream = malloc(sizeof(char));
@@ -425,7 +449,12 @@ char *generate_request_string(char *method, char *url, char *body, int n, ...)
     /* HTTP version */
     _ex_strncat_(&response_stream, "HTTP/1.1", EX_CON(total_size, used_size));
     _ex_strncat_(&response_stream, "\r\n", EX_CON(total_size, used_size));
-    
+
+	/* HTTP Content-Length */
+	memset(code_str, 0, sizeof(code_str));
+	sprintf(code_str, "Content-Length: %ld\r\n", strlen(body));
+	_ex_strncat_(&response_stream, code_str, EX_CON(total_size, used_size));
+
     /* Add the HTTP headers */
     va_start(args, n);
     while(true)
@@ -444,7 +473,68 @@ char *generate_request_string(char *method, char *url, char *body, int n, ...)
     return response_stream;
 }
 
+#ifdef __linux__
+static char *
+/* Common function to read linux proc system file */
+parse_proc_file(const char *filename)
+{
+    char temp_data[100];
+    size_t length, total_size = 1, used_num=0, all_seek=0;
+    char *str = malloc(sizeof(char));
 
+    FILE *fp = fopen(filename, "r");
+    while ( true )
+    {
+        if ( feof(fp) ) break;
+        memset(temp_data, 0, sizeof(temp_data));
+        fread(temp_data, sizeof(char), sizeof(temp_data), fp);
+        length = strlen(temp_data);
+        if ( length == 0 ) break;
+        all_seek += length + 1;
+        fseek(fp, all_seek, SEEK_SET);
+        _ex_strncat_(&str, temp_data, EX_CON(total_size, used_num));
+        _ex_strncat_(&str, " ", EX_CON(total_size, used_num));
+    }
+
+    return str;
+}
+
+/* Remember to free the returned string
+ * Only support Linux proc system
+ * Feature: read process cmdline which store in /proc/PID/cmdline */
+char *parse_proc_cmdline(int pid)
+{
+    char file_temp[100];
+    sprintf(file_temp, "/proc/%d/cmdline", pid);
+    char *str = parse_proc_file(file_temp);
+    return str;
+}
+#endif
+
+/* Return the file name
+ * remember that return value need to be freed after used */
+char *get_file_data(char *filename)
+{
+    FILE *fp = fopen(filename, "r");
+    if ( fp == NULL ) return NULL;
+
+    size_t total_size = 1, used_num = 0, str_len, all_seek_pos = 0;
+    char temp_str[100], *result = malloc(sizeof(char));
+    if ( result == NULL ) return NULL;
+
+    while ( true )
+    {
+        memset(temp_str, 0, sizeof(temp_str));
+        fread(temp_str, sizeof(char), sizeof(temp_str) - 2, fp);
+        str_len = strlen(temp_str);
+        all_seek_pos += str_len + 1;
+        if ( str_len == 0 ) break;
+        fseek(fp, all_seek_pos, SEEK_SET);
+        _ex_strncat_(&result, temp_str, EX_CON(total_size, used_num));
+    }
+
+	return result;
+}
 
 
 

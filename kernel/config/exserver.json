@@ -1,0 +1,19 @@
+{
+  "server": [
+    {
+      "webroot": "/website/test",
+      "listen" : 8181,
+      "host"   : "wwww.money.com"
+    },
+    {
+      "webroot": "/website/novel",
+      "listen" : 8181,
+      "host"   : "www.novel.com"
+    },
+    {
+      "webroot": "/website/data",
+      "listen" : 8181,
+      "host"   : "www.data.com"
+    }
+  ]
+}

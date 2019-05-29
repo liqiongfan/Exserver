@@ -15,7 +15,9 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <errno.h>
+#include <netdb.h>
 #include "exlist.h"
+#include "exjson/exjson.h"
 
 #define BUFFER_SIZE 512
 #define BUFFER_ALLOCATE_SIZE 256
@@ -49,7 +51,7 @@ enum HTTP_METHOD_KIND { GET = 1, PUT, POST, DELETE, OPTIONS, HEAD };
 enum HTTP_KEYWORDS{ HTTP_METHOD = 0, HTTP_URI, HTTP_VERSION };
 enum TRIM_MODE{ TRIM_NONE = 0, TRIM_LEFT, TRIM_RIGHT, TRIM_BOTH };
 /* Trim the substring */
-char *exsubstr(const char *source, size_t start, size_t length, int mode);
+char *exsubstr(const char *source, size_t start, ssize_t length, int mode);
 /* Trim the source string */
 char *extrim(const char *source, int mode);
 
@@ -62,6 +64,17 @@ EXLIST *parse_query_string(const char *query_string);
 /* Generate http response string */
 char *generate_response_string(int code, char *msg, char *body, int n, ...);
 char *generate_request_string(char *method, char *url, char *body, int n, ...);
+
+/* Some apis for special HTTP status code response */
+void send_404_response(int _fd);
+
 #define EX_CON(all_size, total_size) (&(all_size)), (&(total_size))
 void _ex_strncat_(char **dest, const char *source, size_t *origin_size, size_t *used_num);
+
+#ifdef __linux__
+char *parse_proc_cmdline(int pid);
+#endif
 #endif /* SOCKETS_TYPES_H */
+
+/* Get the file data */
+char *get_file_data(char *filename);

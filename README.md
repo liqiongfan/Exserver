@@ -6,6 +6,166 @@
 
 
 
+## 静态网页Exserver服务器 ##
+
+#### 配置文件  ####
+
+配置文件采用  **Exjson** 格式编写，必须包含 **server** 节点
+
+```json
+{
+  "server": [
+    {
+      "webroot": "/website/test",  // 配置网站一
+      "listen" : 8181,             // 服务器统一监听8181
+      "host"   : "wwww.money.com"  // 监听的host
+    },
+    {
+      "webroot": "/website/novel", // 网站二
+      "listen" : 8181,
+      "host"   : "www.novel.com"
+    },
+    {
+      "webroot": "/website/data",  // 网站三
+      "listen" : 8181,
+      "host"   : "www.data.com"
+    }
+  ]
+}
+```
+
+### 运行步骤 ###
+
+```shell
+cd build
+cmake ..
+make
+./sockets
+```
+
+网页文件采用 **sendfile** 传输，目前暂未实现图片文件等，仅实现了 **text/html** 文本文件，正在完善特性中
+
+## 静态网页压测 ##
+
+```shell
+josin@MacBookPro-Josin:~$ ab -n10000 -c100 http://www.money.com:8181/index.html
+This is ApacheBench, Version 2.3 <$Revision: 1826891 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking www.money.com (be patient)
+Completed 1000 requests
+Completed 2000 requests
+Completed 3000 requests
+Completed 4000 requests
+Completed 5000 requests
+Completed 6000 requests
+Completed 7000 requests
+Completed 8000 requests
+Completed 9000 requests
+Completed 10000 requests
+Finished 10000 requests
+
+
+Server Software:        Exserver/1.0
+Server Hostname:        www.money.com
+Server Port:            8181
+
+Document Path:          /index.html
+Document Length:        50 bytes
+
+Concurrency Level:      100
+Time taken for tests:   0.337 seconds
+Complete requests:      10000
+Failed requests:        0
+Total transferred:      1350000 bytes
+HTML transferred:       500000 bytes
+Requests per second:    29708.06 [#/sec] (mean)
+Time per request:       3.366 [ms] (mean)
+Time per request:       0.034 [ms] (mean, across all concurrent requests)
+Transfer rate:          3916.59 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    1   0.4      1       2
+Processing:     1    2   0.7      2       6
+Waiting:        0    1   0.7      1       6
+Total:          1    3   0.6      3       7
+
+Percentage of the requests served within a certain time (ms)
+  50%      3
+  66%      3
+  75%      4
+  80%      4
+  90%      4
+  95%      5
+  98%      5
+  99%      6
+ 100%      7 (longest request)
+```
+
+目前未实现缓存机制，相比nginx而言，性能稍微差点，后续增加缓存机制后，再对比测试，nginx测试如下：
+
+```shell
+josin@MacBookPro-Josin:~$ ab -n10000 -c100 http://www.money.com/index.html
+This is ApacheBench, Version 2.3 <$Revision: 1826891 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking www.money.com (be patient)
+Completed 1000 requests
+Completed 2000 requests
+Completed 3000 requests
+Completed 4000 requests
+Completed 5000 requests
+Completed 6000 requests
+Completed 7000 requests
+Completed 8000 requests
+Completed 9000 requests
+Completed 10000 requests
+Finished 10000 requests
+
+
+Server Software:        nginx/1.13.12
+Server Hostname:        www.money.com
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        170 bytes
+
+Concurrency Level:      100
+Time taken for tests:   0.330 seconds
+Complete requests:      10000
+Failed requests:        0
+Non-2xx responses:      10000
+Total transferred:      3210000 bytes
+HTML transferred:       1700000 bytes
+Requests per second:    30275.60 [#/sec] (mean)
+Time per request:       3.303 [ms] (mean)
+Time per request:       0.033 [ms] (mean, across all concurrent requests)
+Transfer rate:          9490.69 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    1   0.3      1       2
+Processing:     1    2   0.6      2      10
+Waiting:        0    1   0.6      1       6
+Total:          2    3   0.5      3      11
+
+Percentage of the requests served within a certain time (ms)
+  50%      3
+  66%      3
+  75%      3
+  80%      3
+  90%      4
+  95%      4
+  98%      4
+  99%      5
+ 100%     11 (longest request)
+```
+
+
+
 ## 压测的源码
 
 ```c

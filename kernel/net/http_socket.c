@@ -99,7 +99,7 @@ int socket_recv_fd(int fd)
 }
 
 /* Worker process */
-void worker_process(int index, void (*callback)(int fd, EXLIST *header, char *method, char *url, int keep_alive))
+void worker_process(int index, void (*callback)(int fd, EXLIST *header, char *host, char *method, char *url, int keep_alive))
 {
 	int     epoll_fd,
 			result,
@@ -123,7 +123,7 @@ void worker_process(int index, void (*callback)(int fd, EXLIST *header, char *me
 	epoll_fd = kqueue();
 #endif
 	assert(epoll_fd != -1);
-	char *request_url = NULL, *request_method = NULL;
+	char *request_url = NULL, *request_method = NULL, *server_host = NULL;
 
 #ifdef __linux__
 	ev.data.fd = read_fd;
@@ -224,6 +224,12 @@ void worker_process(int index, void (*callback)(int fd, EXLIST *header, char *me
 								{
 									EX_HTTP_HEADER *header = ELV_VALUE_P(ptr);
 
+									/* Find the request host */
+									if ( strncasecmp(HEADER_KEY_P(header), HT_HTTP_HOST) == 0 )
+									{
+										server_host = HEADER_VALUE_P(header);
+									}
+
 									/* Find the request_method */
 									if (strncmp(HEADER_KEY_P(header), HT_REQUEST_METHOD) == 0) {
 										request_method = HEADER_VALUE_P(header);
@@ -258,7 +264,7 @@ void worker_process(int index, void (*callback)(int fd, EXLIST *header, char *me
 								} EXLIST_FOREACH_END();
 
 								/* after parsing steps, calling the callback */
-								callback(new_client_fd, stream, request_method, request_url, keepalive);
+								callback(new_client_fd, stream, server_host, request_method, request_url, keepalive);
 
 								/* after using, destroy the http stream result. */
 								destroy_exlist(stream);
@@ -289,8 +295,14 @@ void worker_process(int index, void (*callback)(int fd, EXLIST *header, char *me
 
 /* Generate the worker process
  * pids must have space to store the process id */
-void generate_worker( int worker_num, void (*url_callback)(int fd, EXLIST *header, char *method, char *url, int keep_alive) )
+void generate_worker( int worker_num, void (*url_callback)(int fd, EXLIST *header, char *host, char *method, char *url, int keep_alive) )
 {
+	/* Read Exserver config */
+	char *config_file_data = get_file_data("../kernel/config/exserver.json");
+	configs = decode_json(config_file_data);
+	free(config_file_data);
+
+	/* Generate child processers */
 	int _i = 0, pid = 0, result;
 	finally_worker_num = worker_num;
 	assert(worker_num <= MAX_WORKER_NUMBER);
@@ -312,7 +324,7 @@ void generate_worker( int worker_num, void (*url_callback)(int fd, EXLIST *heade
 void master_process( int server_fd )
 {
 	int epoll_num, epoll_fd, epoll_index,
-		dispatch_id, client_fd, result, dispatch_index = 0;;
+		dispatch_id, client_fd, result, dispatch_index = 0;
 
 #ifdef __linux__
 	struct epoll_event ev, event[EPOLL_KQUEUE_NUMBER];
@@ -388,7 +400,7 @@ void master_process( int server_fd )
 
 /* Run the http server, when coming the event kernel will invoking the callback
  * This method is one process http server which runs the main thread */
-void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, char *, int ))
+void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, char *, char *, int ))
 {
 	int _j, result = 0,     /* epoll wait sum for iterator */
 		keepalive = 0,      /* keep-alive or not */
@@ -398,12 +410,15 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 		client_fd;          /* client fd */
 
 	char *request_url    = NULL,
+	     *request_host   = NULL,
 		 *request_method = NULL;
 
 	size_t  start_pos = 0,  /* parsing http stream start position. */
 	        stream_length;  /* the http stream parsing result length, if start_pos equals to stream_length, means the parsing end. */
 
-    int all_num = 0;
+    /* Client sockaddr */
+    struct sockaddr client_addr;
+    socklen_t client_addr_len;
 	   
 #ifdef __linux__
 	/* Using the epoll API */
@@ -467,7 +482,7 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 					if ( events[_j].ident == server_fd )
 #endif
 					{
-						client_fd = accept(server_fd, NULL, NULL);
+						client_fd = accept(server_fd, &client_addr, &client_addr_len);
 						if ( client_fd )
 						{
 						    if ( client_fd == -1 )
@@ -498,7 +513,7 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 #endif
 
 						char *buff = get_socket_stream_data(client_fd, &stream_length);
-      
+
 						if ( buff )
 						{
 							start_pos = 0;
@@ -509,6 +524,12 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 								EXLIST_FOREACH(stream, ptr)
 								{
 									EX_HTTP_HEADER *header = ELV_VALUE_P(ptr);
+
+									/* Find the host */
+									if ( strncasecmp(HEADER_KEY_P(header), HT_HTTP_HOST) == 0 )
+									{
+										request_host = HEADER_VALUE_P(header);
+									}
 
 									/* Find the request_method */
 									if ( strncmp(HEADER_KEY_P(header), "request_method", 14) == 0 )
@@ -556,7 +577,7 @@ void http_server_run(int server_fd, void (*callback)(int , EXLIST *, char *, cha
 								} EXLIST_FOREACH_END();
 
 								/* after parsing steps, calling the callback */
-								callback(client_fd, stream, request_method, request_url, keepalive);
+								callback(client_fd, stream, request_host, request_method, request_url, keepalive);
 
 								/* after using, destroy the http stream result. */
 								destroy_exlist(stream);
