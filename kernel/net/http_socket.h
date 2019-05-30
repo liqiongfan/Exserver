@@ -22,6 +22,8 @@
 #include <sys/uio.h>
 #endif
 
+#define GLOBAL_VARS
+
 /* Socket transfer length */
 #define SOCKET_FD_LEN CMSG_LEN(sizeof(int))
 
@@ -48,14 +50,13 @@
 #define CONFIG_WEBROOT    "webroot", 7
 #define CONFIG_INDEX      "index", 5
 
-
 /* The data for data store */
-static int pids[MAX_WORKER_NUMBER];
-static int fd_sockets[MAX_WORKER_NUMBER][2];
-static int finally_worker_num = 0;
+GLOBAL_VARS static int pids[MAX_WORKER_NUMBER];
+GLOBAL_VARS static int fd_sockets[MAX_WORKER_NUMBER][2];
+GLOBAL_VARS static int finally_worker_num = 0;
 
 /* Exserver config */
-EXJSON *configs;
+GLOBAL_VARS EXJSON *configs;
 
 typedef struct _EX_REQUEST_T
 {
