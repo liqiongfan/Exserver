@@ -259,7 +259,8 @@ EXLIST *parse_http_stream(const char *http_request_stream, size_t *str_len)
                 value_data = INIT_HEADER();
                 HEADER_KEY_P(value_data) = extrim("http_body", TRIM_NONE);
                 HEADER_VALUE_P(value_data) = exsubstr(http_request_stream, _i + 4, _content_length, TRIM_NONE);
-                push_tail(__list_data, value_data, __free_http_header__);
+                /* push_tail(__list_data, value_data, __free_http_header__); */
+                append_head(__list_data, value_data, __free_http_header__);
                 
                 /* Set the last start pos.
                 *str_len = _i + 4 + _content_length; */
