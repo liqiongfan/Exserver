@@ -3,17 +3,20 @@
     {
       "webroot": "/website/test",
       "listen" : 8181,
-      "host"   : "wwww.money.com"
+      "host"   : "www.money.com",
+      "index"  : "index.html"
     },
     {
       "webroot": "/website/novel",
-      "listen" : 8181,
-      "host"   : "www.novel.com"
+      "listen" : 8182,
+      "host"   : "www.novel.com",
+      "index"  : "index.html"
     },
     {
       "webroot": "/website/data",
-      "listen" : 8181,
-      "host"   : "www.data.com"
+      "listen" : 8183,
+      "host"   : "www.data.com",
+      "index"  : "index.html"
     }
   ]
 }
