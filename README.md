@@ -10,24 +10,34 @@
 
 #### 配置文件  ####
 
-配置文件采用  **Exjson** 格式编写，必须包含 **server** 节点
+配置文件采用  **Exjson** 格式编写, **Exjson** 支持注释(注释支持 `#` 或者 `//`)
+
+##### 节点`server` #####
+
+配置静态服务器,是一个数组，允许配置多个，每个配置的 `listen` 端口号不允许重复
+  
+- `webroot` 配置服务器的网站根目录
+- `listen`  配置服务器监听的端口
+- `host`    配置服务器监听的host
+- `index`   配置默认文件，不配置则系统自动设置为 `index.html`
 
 ```json
 {
+  // 配置服务器
   "server": [
     {
-      "webroot": "/website/test",  // 配置网站一的根目录:/website/test
-      "listen" : 8181,             // www.money.com监听8181
-      "host"   : "wwww.money.com"  // 监听的host
+      "webroot": "/website/test",
+      "listen" : 8181,           
+      "host"   : "wwww.money.com"
     },
     {
-      "webroot": "/website/novel", // 网站二的根目录:/website/novel
-      "listen" : 8182,             // www.novel.com监听8182
-      "host"   : "www.novel.com"   
+      "webroot": "/website/novel",
+      "listen" : 8181,
+      "host"   : "www.novel.com"
     },
     {
-      "webroot": "/website/data",  // 网站三的根目录:/website/data
-      "listen" : 8183,             // www.data.com监听8183 
+      "webroot": "/website/data",
+      "listen" : 8181,
       "host"   : "www.data.com"
     }
   ]
@@ -43,7 +53,7 @@ make
 ./sockets
 ```
 
-网页文件采用 **sendfile** 传输，目前暂未实现图片文件等，仅实现了 **text/html** 文本文件，正在完善特性中
+网页文件采用 **sendfile** 传输，目前暂未实现图片文件等，仅实现了 **text/html** 文本文件，正在文件MIME特性中
 
 ## 静态网页压测 ##
 
