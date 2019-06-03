@@ -6,7 +6,13 @@
 
 
 
-## 静态网页Exserver服务器 ##
+## 什么是 Exserver ?
+
+**Exserver** 是一款C语言开发的兼容 FreeBSD & Linux 系统的服务器软件，代码结构清晰、合理，适合当做纯静态博客网站或者学习 socket编程使用。
+
+
+
+## 建立一个纯静态网页服务器 ##
 
 #### 配置文件  ####
 
@@ -15,7 +21,7 @@
 ##### 节点`server` #####
 
 配置静态服务器,是一个数组，允许配置多个，每个配置的 `listen` 端口号不允许重复
-  
+
 - `webroot` 配置服务器的网站根目录
 - `listen`  配置服务器监听的端口
 - `host`    配置服务器监听的host
@@ -53,7 +59,22 @@ make
 ./sockets
 ```
 
-网页文件采用 **sendfile** 传输，目前暂未实现图片文件等，仅实现了 **text/html** 文本文件，正在文件MIME特性中
+网页文件采用 **sendfile** 传输，支持的文件格式如下：
+
+| text/html                    | HTML文本文件                  |
+| ---------------------------- | ----------------------------- |
+| **text/css**                 | **CSS样式文件**               |
+| **text/xml**                 | **XML文件**                   |
+| **image/gif**                | **GIF文件**                   |
+| **image/jpeg**               | **JPG 图片**                  |
+| **application/javascript**   | **JavaScript脚本**            |
+| **application/json**         | **JSON文件**                  |
+| **text/plain**               | **TXT文件**                   |
+| **image/png**                | **PNG图像文件**               |
+| **video/mp4**                | **MP4文件**                   |
+| **audio/mpeg**               | **MP3文件**                   |
+| **application/zip**          | **ZIP文件**                   |
+| **application/octet-stream** | **不识别文件 默认返回此格式** |
 
 ## 静态网页压测 ##
 
