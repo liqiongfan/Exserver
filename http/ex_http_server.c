@@ -115,12 +115,12 @@ static void ex_parser_http(int fd, EX_REQUEST_T *req)
 	sendfile(fd, ffd, 0, (size_t) file_stat.st_size);
 #else
 	struct iovec io_vec;
-    io_vec.iov_base = response;
-    io_vec.iov_len = strlen(response);
+    io_vec.iov_base = re;
+    io_vec.iov_len = strlen(re);
     struct sf_hdtr sf_hdtr1;
     sf_hdtr1.headers = &io_vec;
     sf_hdtr1.hdr_cnt = 1;
-    sendfile( file_fd, fd, 0, ( off_t * )file_stat.st_size, &sf_hdtr1, 0 );
+    sendfile( ffd, fd, 0, ( off_t * )file_stat.st_size, &sf_hdtr1, 0 );
 #endif
 }
 
@@ -266,8 +266,6 @@ void ex_htp_server_master_process(int fd, int signo, int efd)
 		ex_logger(LOG_ERROR, "Accept error; " EX_ERROR_MSG_FMT, EX_ERROR_MSG_STR);
 		return ;
 	}
-
-	if ( master_number == 1000000 ) master_number = 0;
 
 	did = master_number % current_process_number;
 
