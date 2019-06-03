@@ -1,10 +1,25 @@
-cmake_minimum_required(VERSION 3.13)
-project(sockets C)
+cmake_minimum_required(VERSION 3.11)
+project(exserver C)
 
-set(CMAKE_C_STANDARD 99)
+set(MAIN_SOURCES main.c)
 
-aux_source_directory(kernel KERNEL_DIRS)
-aux_source_directory(kernel/exjson EXJSON_DIRS)
-aux_source_directory(kernel/net KERNEL_NET_DIRS)
+include_directories(
+    com/exjson
+    core
+    http
+    events
+)
 
-add_executable(sockets main.c ${KERNEL_DIRS} ${EXJSON_DIRS} ${KERNEL_NET_DIRS})
+aux_source_directory(core       CORE_SOURCES)
+aux_source_directory(http       HTTP_SOURCES)
+aux_source_directory(events     EVENT_SOURCES)
+aux_source_directory(com/exjson EXJSON_SOURCES)
+
+add_executable(
+    exserver
+    ${MAIN_SOURCES}
+    ${CORE_SOURCES}
+    ${HTTP_SOURCES}
+    ${EXJSON_SOURCES}
+    ${EVENT_SOURCES}
+)
