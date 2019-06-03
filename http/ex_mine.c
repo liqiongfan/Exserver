@@ -68,7 +68,9 @@ char *ex_get_mine_type(char *f)
 		{
 			return MIMES[14];
 		}
-		 printf("%d %d %d %d %d \n%s", code[0], code[1], code[2], code[3], code[4], code);
+#if EX_DEBUG
+		printf("%d %d %d %d %d \n%s", code[0], code[1], code[2], code[3], code[4], code);
+#endif
 		fclose(fp);
 	}
 

@@ -98,7 +98,7 @@ static void ex_parser_http(int fd, EX_REQUEST_T *req)
 #ifdef __linux__
 	sprintf(mr, "Content-Length: %ld", file_stat.st_size);
 #else
-	sprintf(match_root, "Content-Length: %lld", file_stat.st_size);
+	sprintf(mr, "Content-Length: %lld", file_stat.st_size);
 #endif
 
 	if ( req->keep_alive )
