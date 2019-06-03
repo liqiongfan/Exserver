@@ -267,6 +267,8 @@ void ex_htp_server_master_process(int fd, int signo, int efd)
 		return ;
 	}
 
+	if ( master_number == 1000000 ) master_number = 0;
+
 	did = master_number % current_process_number;
 
 	ex_socket_send_fd(WORKER_SOCKETS[did][0], cid);
