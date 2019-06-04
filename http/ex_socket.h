@@ -21,7 +21,7 @@
 #define SOCKET_FD_LEN CMSG_LEN(sizeof(int))
 
 /* if your machine is much faster, incr this buff size */
-#define BUFFER_SIZE 20
+#define BUFFER_SIZE 512
 
 #define ex_server_accept(fd, addr, len) accept(fd, addr, len)
 

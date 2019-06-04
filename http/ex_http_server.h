@@ -24,6 +24,7 @@
 #include <ex_http_stream.h>
 
 typedef int   soc_t;
+typedef long  sol_t;
 typedef void (*FUNC)(int ,EX_REQUEST_T *);
 
 static EXJSON *config    = NULL;
@@ -32,7 +33,12 @@ soc_t   process_index, master_number, current_process_number;
 pid_t   WORKERS[MAX_WORKERS];
 soc_t   WORKER_SOCKETS[MAX_WORKERS][2];
 
-#define HT_SERVER         "server"
+#define GLOBAL_VARS
+#define SYSTEM
+
+static GLOBAL_VARS SYSTEM  sol_t  use_send = 0;
+
+#define HT_SERVER         "servers"
 #define HT_SYSTEM         "system"
 #define HT_SEND_FILE      "send_file"
 

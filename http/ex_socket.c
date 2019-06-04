@@ -205,8 +205,11 @@ char *ex_read_requests(int _fd, long *len)
         }
         else
         {
-            mp = ex_strirncasestr(r, rn, EX_STRL("GET"));
-            if ( mp != -1 ) return r;
+	        cp  = ex_strirncasestr(r, un, EX_STRL("\r\n\r\n"));
+	        if ( cp != -1 ) {
+		        mp = ex_strirncasestr(r, rn, EX_STRL("GET"));
+		        if (mp != -1) return r;
+	        }
         }
     }
 }

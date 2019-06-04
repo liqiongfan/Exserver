@@ -7,24 +7,18 @@
 /* Parse the http web browser */
 void ex_parser_https(int fd, EX_REQUEST_T *req)
 {
+	EXJSON *cd;
 	int     i,    j,  im, ffd;
-	long    sp,   sf, len;
-	EXJSON *cd,  *cs;
+	long    sp,   len;
 	char    *wr, *sh, *qp, *wi, *by, *re, *rru, *mime, cm[BUFFER_ALLOCATE_SIZE], mr[BUFFER_ALLOCATE_SIZE];
 
 	sp  = 80;
-	len = sf = im = 0;
+	len = im = 0;
 	by  = qp = wr = sh = NULL;
 	wi  = "index.html";
 	ex_memzero(mr, sizeof(mr));
 
 	cd = exjson_get_val_from_key(config, HT_SERVER);
-	cs = exjson_get_val_from_key(config, HT_SYSTEM);
-	if ( cs )
-	{
-		/* Turn on the senfile or not */
-		sf = *(long *)exjson_get_val_from_key(cs, HT_SEND_FILE);
-	}
 
 	for (i = 0; i < E_NUM_P(cd); ++i)
 	{
@@ -106,7 +100,7 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
 	struct stat file_stat;
 	fstat(ffd, &file_stat);
 #ifdef __linux__
-	if ( !sf ) {
+	if ( !use_send ) {
 		by = ex_copy_data_from_file(mr, &len);
 	}
 #endif
@@ -128,7 +122,7 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
 
 #ifdef __linux__
 	write(fd, re, strlen(re));
-	if ( sf )
+	if ( use_send )
 	{
 		sendfile(fd, ffd, NULL, (size_t)file_stat.st_size);
 	}
@@ -196,7 +190,14 @@ static void ex_http_worker_run(int fd, int signo, int eid)
 			} EXLIST_FOREACH_END();
 
 			/* Call the back function */
-			ex_parser_https(fd, &req);
+			if ( http_back )
+			{
+				http_back(fd, &req);
+			}
+			else
+			{
+				ex_parser_https(fd, &req);
+			}
 
 			if ( !req.keep_alive )
 			{
@@ -303,12 +304,18 @@ void ex_http_server_start(int fd)
 void ex_http_server_from_config()
 {
 	long    sp;
-	EXJSON *cd;
-	int     i,  j, fd, event_fd;
+	EXJSON *cd, *cs;
+	int     i,   j, fd, event_fd;
 
 	event_fd = ex_init_events();
 
 	cd = exjson_get_val_from_key(config, HT_SERVER);
+	cs = exjson_get_val_from_key(config, HT_SYSTEM);
+
+	if ( cs )
+	{
+		use_send = *(long *)exjson_get_val_from_key(cs, HT_SEND_FILE);
+	}
 
 	for (i = 0; i < E_NUM_P(cd); ++i)
 	{
