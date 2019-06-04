@@ -69,13 +69,14 @@ char *generate_response_string(int code, char *msg, char *body, int n, ...);
 char *generate_request_string(char *method, char *url, char *body, int n, ...);
 
 /* Some apis for special HTTP status code response */
-void send_404_response(int _fd);
+void send_404_response(int _fd, int keep);
 
 #ifdef __linux__
 char *parse_proc_cmdline(int pid);
 #endif
 
 /* Get the file data */
+char *ex_copy_data_from_file(char *file);
 char *get_file_data(char *filename);
 
 #endif /* SOCKETS_TYPES_H */

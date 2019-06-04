@@ -5,20 +5,24 @@
 #include <ex_http_server.h>
 
 /* Parse the http web browser */
-static void ex_parser_http(int fd, EX_REQUEST_T *req)
+void ex_parser_https(int fd, EX_REQUEST_T *req)
 {
-	int     i, j, im, ffd;
-	long    sp;
-	EXJSON *cd;
-	char    *wr, *sh, *qp, *wi, *re, *rru, *mime, cm[BUFFER_ALLOCATE_SIZE], mr[BUFFER_ALLOCATE_SIZE];
+	int     i,    j, im, ffd;
+	long    sp,   sf;
+	EXJSON *cd,  *cs;
+	char    *wr, *sh, *qp, *wi, *by, *re, *rru, *mime, cm[BUFFER_ALLOCATE_SIZE], mr[BUFFER_ALLOCATE_SIZE];
 
 	im = 0;
 	sp = 80;
-	qp = wr = sh = NULL;
+	by = qp = wr = sh = NULL;
 	wi = "index.html";
 	ex_memzero(mr, sizeof(mr));
 
 	cd = exjson_get_val_from_key(config, HT_SERVER);
+	cs = exjson_get_val_from_key(config, HT_SYSTEM);
+
+	/* Turn on the senfile or not */
+	sf = *(long *)exjson_get_val_from_key(cs, HT_SEND_FILE);
 
 	for (i = 0; i < E_NUM_P(cd); ++i)
 	{
@@ -60,7 +64,9 @@ static void ex_parser_http(int fd, EX_REQUEST_T *req)
 
 	/* Get whether host is matched or not
 	 * if not matched send 404 not found to client. */
-	if ( !im ) return send_404_response(fd);
+	if ( !im ) {
+		return send_404_response(fd, req->keep_alive);
+	}
 
 	/* Now real_request_url has the form like: /index.html */
 	if ( req->request_url && *(req->request_url) == '/' && *(req->request_url + 1) == '\0')
@@ -79,11 +85,16 @@ static void ex_parser_http(int fd, EX_REQUEST_T *req)
 	/* Find the file data */
 	ex_memzero(mr, sizeof(mr));
 	sprintf(mr, "%s/%s", wr, rru);
-	if ( qp ) free(rru);
+	if ( qp )
+	{
+		ex_memfree(rru);
+	}
 
 	/* Open the file */
 	ffd = open(mr, O_RDONLY);
-	if ( ffd == -1 ) return send_404_response(fd);
+	if ( ffd == -1 ) {
+		return send_404_response(fd, req->keep_alive);
+	}
 
 	ex_memzero(cm, sizeof(cm));
 	mime = ex_get_mine_type(mr);
@@ -92,7 +103,11 @@ static void ex_parser_http(int fd, EX_REQUEST_T *req)
 	/* Get the file stat info. */
 	struct stat file_stat;
 	fstat(ffd, &file_stat);
-
+#ifdef __linux__
+	if ( !sf ) {
+		by = ex_copy_data_from_file(mr);
+	}
+#endif
 	/* Set the Content-Length according the file data */
 	ex_memzero(mr, sizeof(mr));
 #ifdef __linux__
@@ -100,19 +115,21 @@ static void ex_parser_http(int fd, EX_REQUEST_T *req)
 #else
 	sprintf(mr, "Content-Length: %lld", file_stat.st_size);
 #endif
-
 	if ( req->keep_alive )
 	{
-		re = generate_response_string( 200, "OK", "", 4, "Server: Exserver/1.0", mr, cm, "Connection: keep-alive" );
+		re = generate_response_string(200, "OK", by, 3, mr, cm, "Connection: keep-alive");
 	}
 	else
 	{
-		re = generate_response_string( 200, "OK", "", 4, "Server: Exserver/1.0", mr, cm, "Connection: close" );
+		re = generate_response_string(200, "OK", by, 3, mr, cm, "Connection: close");
 	}
 
 #ifdef __linux__
 	write(fd, re, strlen(re));
-	sendfile(fd, ffd, 0, (size_t) file_stat.st_size);
+	if ( sf )
+	{
+		sendfile(fd, ffd, NULL, (size_t)file_stat.st_size);
+	}
 #else
 	struct iovec io_vec;
     io_vec.iov_base = re;
@@ -122,6 +139,9 @@ static void ex_parser_http(int fd, EX_REQUEST_T *req)
     sf_hdtr1.hdr_cnt = 1;
     sendfile( ffd, fd, 0, ( off_t * )file_stat.st_size, &sf_hdtr1, 0 );
 #endif
+	close(ffd);
+	ex_memfree(re);
+	if ( by ) ex_memfree(by);
 }
 
 static void ex_http_worker_run(int fd, int signo, int eid)
@@ -131,7 +151,7 @@ static void ex_http_worker_run(int fd, int signo, int eid)
 	EXLIST      *s;
 	EXLIST_V    *ptr;
 	EX_REQUEST_T req;
-	char        *buff;
+	char        *buff,  *re;
 	long         bl,    np;
 	int          cfd,   cld;
 
@@ -174,22 +194,15 @@ static void ex_http_worker_run(int fd, int signo, int eid)
 			} EXLIST_FOREACH_END();
 
 			/* Call the back function */
-			if ( http_back )
-			{
-				http_back(fd, &req);
-			}
-			else
-			{
-				ex_parser_http(fd, &req);
-			}
-
-			destroy_exlist(s);
-			ex_memfree(buff);
+			ex_parser_https(fd, &req);
 
 			if ( !req.keep_alive )
 			{
 				shutdown(fd, SHUT_WR);
 			}
+
+			destroy_exlist(s);
+			ex_memfree(buff);
 
 			if ( bl == np ) break;
 		}

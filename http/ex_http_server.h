@@ -33,6 +33,8 @@ pid_t   WORKERS[MAX_WORKERS];
 soc_t   WORKER_SOCKETS[MAX_WORKERS][2];
 
 #define HT_SERVER         "server"
+#define HT_SYSTEM         "system"
+#define HT_SEND_FILE      "send_file"
 
 #define CONFIG_LISTEN     "listen", 6
 #define CONFIG_HOST       "host", 4

@@ -236,19 +236,34 @@ char *generate_response_string(int code, char *msg, char *body, int n, ...)
 
 	/* HTTP body */
 	_ex_strncat_(&response_stream, "\r\n", EX_CON(total_size, used_size));
-	_ex_strncat_(&response_stream, body, EX_CON(total_size, used_size));
+	if ( body )
+		_ex_strncat_(&response_stream, body, EX_CON(total_size, used_size));
 
 	return response_stream;
 }
 
-void send_404_response(int _fd)
+void send_404_response(int _fd, int keep)
 {
-	char *response = generate_response_string(
-        404, "Not Found", "Not Found",
-        2,
-        "Content-Type: text/html",
-        "Content-Length: 9"
-	);
+	char *response;
+	if ( keep ) {
+		response = generate_response_string(
+				404, "Not Found", "Not Found",
+				3,
+				"Connection: keep-alive",
+				"Content-Type: text/html",
+				"Content-Length: 9"
+		);
+	}
+	else
+	{
+		response = generate_response_string(
+				404, "Not Found", "Not Found",
+				3,
+				"Connection: close",
+				"Content-Type: text/html",
+				"Content-Length: 9"
+		);
+	}
 	write(_fd, response, strlen(response));
 	free(response);
 }
@@ -335,6 +350,40 @@ char *parse_proc_cmdline(int pid)
 }
 #endif
 
+/* Binary safe */
+char *ex_copy_data_from_file(char *file)
+{
+	FILE    *fp;
+	size_t   bl, al;
+	char    *r, *tr,  bf[BUFFER_SIZE];
+
+	r  = NULL;
+	al = 0;
+
+	fp = fopen(file, "r+");
+	if ( fp == NULL ) return NULL;
+
+	while (true)
+	{
+		if ( feof(fp) ) break;
+
+		ex_memzero(bf, sizeof(bf));
+		bl = fread(bf, sizeof(char), sizeof(bf), fp);
+		al += bl;
+		tr = realloc(r, sizeof(char) * al);
+		if ( tr == NULL ) {
+			free(r);
+			break;
+		}
+		r = tr;
+		ex_copymem(r, bf, sizeof(char) * bl);
+	}
+
+	fclose(fp);
+	return r;
+}
+
+/* Not binary safe */
 char *get_file_data(char *filename)
 {
 	FILE *fp = fopen(filename, "r");
@@ -355,7 +404,7 @@ char *get_file_data(char *filename)
 		fseek(fp, all_seek_pos, SEEK_SET);
 		_ex_strncat_(&result, temp_str, EX_CON(total_size, used_num));
 	}
-
+	fclose(fp);
 	return result;
 }
 
