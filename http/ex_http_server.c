@@ -12,17 +12,19 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
 	EXJSON *cd,  *cs;
 	char    *wr, *sh, *qp, *wi, *by, *re, *rru, *mime, cm[BUFFER_ALLOCATE_SIZE], mr[BUFFER_ALLOCATE_SIZE];
 
-	im = 0;
 	sp = 80;
+	sf = im = 0;
 	by = qp = wr = sh = NULL;
 	wi = "index.html";
 	ex_memzero(mr, sizeof(mr));
 
 	cd = exjson_get_val_from_key(config, HT_SERVER);
 	cs = exjson_get_val_from_key(config, HT_SYSTEM);
-
-	/* Turn on the senfile or not */
-	sf = *(long *)exjson_get_val_from_key(cs, HT_SEND_FILE);
+	if ( cs )
+	{
+		/* Turn on the senfile or not */
+		sf = *(long *)exjson_get_val_from_key(cs, HT_SEND_FILE);
+	}
 
 	for (i = 0; i < E_NUM_P(cd); ++i)
 	{
