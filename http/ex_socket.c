@@ -34,7 +34,7 @@ int ex_create_socket(const char *host, uint16_t port)
 	}
 	else
 	{
-		addr.sin_addr.s_addr = htons(INADDR_ANY);
+		addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	}
 	addr.sin_port = htons(port);
 	addr.sin_family = AF_INET;
@@ -98,18 +98,15 @@ int ex_make_fd_nonblock(int fd)
 
 char *ex_read_num_data(int _fd, long len)
 {
-    int     _i;
     ssize_t rn;
     char    *r, tf[BUFFER_SIZE];
-    long    lt, en, un, ln;
+    long    en, un, ln;
     
     r = malloc(sizeof(char) * ( len ) );
     if ( r == NULL ) return NULL;
     ex_memzero(r, sizeof(char) * len);
     
     un = 0;
-    lt = (int)(len / BUFFER_SIZE) + 1;
-    
     
     if ( len <= BUFFER_SIZE )
     {
@@ -124,7 +121,7 @@ char *ex_read_num_data(int _fd, long len)
     {
         ln = len;
         
-        for ( _i = 0; _i <= lt; _i++ )
+        for ( ;; )
         {
             if (ln == 0) break;
             
@@ -135,6 +132,11 @@ char *ex_read_num_data(int _fd, long len)
             
             ex_memzero(tf, sizeof(tf));
             rn = read(_fd, tf, sizeof(char) * en);
+            if ( rn == -1
+                && (errno == EAGAIN || errno == EWOULDBLOCK) )
+            {
+                continue;
+            }
             if ( rn )
             {
                 ex_copymem( r + un, tf, sizeof(char) * en );
@@ -155,14 +157,14 @@ char *ex_read_requests(int _fd, long *len)
     char *r, *v, *b, *nv, tf[BUFFER_SIZE];
     long rn, an, un,  cp, mp, cl, lv;
     
-    un = an = 0;
+    cp = un = an = 0;
     r  = NULL;
 
     for ( ;; )
     {
         ex_memzero(tf, sizeof(tf));
         rn = read(_fd, tf, sizeof(char) * BUFFER_SIZE);
-        
+        if ( rn == -1 && errno == EAGAIN) continue;
         if ( rn == 0 && !r ) return r;
         
         an += rn;
@@ -176,10 +178,12 @@ char *ex_read_requests(int _fd, long *len)
         r = v;
         
         ex_copymem(r + un, tf, sizeof(char) * rn);
-        if ( rn < BUFFER_SIZE && !un ) return r;
         un += rn;
-
-        cp = ex_strirncasestr(r, un, EX_STRL("Content-Length"));
+        
+        if ( !cp || cp == -1 )
+        {
+            cp = ex_strirncasestr(r, un, EX_STRL("Content-Length"));
+        }
         if ( cp != -1 )
         {
             cl = ex_get_cl(r, cp);
@@ -187,15 +191,17 @@ char *ex_read_requests(int _fd, long *len)
             if ( cl == 0 ) return r;
             
             b  = strstr(r + cp, "\r\n\r\n");
+            
             if ( b )
             {
                 lv = cl - (un - (b - r) - 4);
-                nv = ex_read_num_data(_fd, lv);
                 
+                nv = ex_read_num_data(_fd, lv);
                 v = realloc(r, sizeof(char) * ( un + lv ));
                 r = v;
                 *len += lv;
                 ex_copymem(r + un, nv, sizeof(char) * lv);
+                ex_memfree(nv);
                 return r;
             }
             else
@@ -205,11 +211,13 @@ char *ex_read_requests(int _fd, long *len)
         }
         else
         {
-	        cp  = ex_strirncasestr(r, un, EX_STRL("\r\n\r\n"));
-	        if ( cp != -1 ) {
-		        mp = ex_strirncasestr(r, rn, EX_STRL("GET"));
-		        if (mp != -1) return r;
-	        }
+            if ( r[0] == 'G' && r[1] == 'E' && r[2] == 'T' && r[3] == ' ' )
+            {
+                if ( r[un-1] == '\n' && r[un-2] == '\r' && r[un-3] == '\n' && r[un-4] == '\r' )
+                {
+                    return r;
+                }
+            }
         }
     }
 }
