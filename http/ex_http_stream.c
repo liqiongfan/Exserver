@@ -351,14 +351,14 @@ char *parse_proc_cmdline(int pid)
 #endif
 
 /* Binary safe */
-char *ex_copy_data_from_file(char *file)
+char *ex_copy_data_from_file(char *file, long *size)
 {
 	FILE    *fp;
-	size_t   bl, al;
+	size_t   bl, al,  ul;
 	char    *r, *tr,  bf[BUFFER_SIZE];
 
 	r  = NULL;
-	al = 0;
+	ul = al = 0;
 
 	fp = fopen(file, "r+");
 	if ( fp == NULL ) return NULL;
@@ -366,17 +366,20 @@ char *ex_copy_data_from_file(char *file)
 	while (true)
 	{
 		if ( feof(fp) ) break;
-
 		ex_memzero(bf, sizeof(bf));
 		bl = fread(bf, sizeof(char), sizeof(bf), fp);
+		if ( bl == 0 ) break;
 		al += bl;
+		*size += bl;
+		fseek(fp, al, SEEK_SET);
 		tr = realloc(r, sizeof(char) * al);
 		if ( tr == NULL ) {
 			free(r);
 			break;
 		}
 		r = tr;
-		ex_copymem(r, bf, sizeof(char) * bl);
+		ex_copymem(r + ul, bf, sizeof(char) * bl);
+		ul += bl;
 	}
 
 	fclose(fp);

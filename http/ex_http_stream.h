@@ -76,7 +76,7 @@ char *parse_proc_cmdline(int pid);
 #endif
 
 /* Get the file data */
-char *ex_copy_data_from_file(char *file);
+char *ex_copy_data_from_file(char *file, long *len);
 char *get_file_data(char *filename);
 
 #endif /* SOCKETS_TYPES_H */

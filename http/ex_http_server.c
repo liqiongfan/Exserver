@@ -7,15 +7,15 @@
 /* Parse the http web browser */
 void ex_parser_https(int fd, EX_REQUEST_T *req)
 {
-	int     i,    j, im, ffd;
-	long    sp,   sf;
+	int     i,    j,  im, ffd;
+	long    sp,   sf, len;
 	EXJSON *cd,  *cs;
 	char    *wr, *sh, *qp, *wi, *by, *re, *rru, *mime, cm[BUFFER_ALLOCATE_SIZE], mr[BUFFER_ALLOCATE_SIZE];
 
-	sp = 80;
-	sf = im = 0;
-	by = qp = wr = sh = NULL;
-	wi = "index.html";
+	sp  = 80;
+	len = sf = im = 0;
+	by  = qp = wr = sh = NULL;
+	wi  = "index.html";
 	ex_memzero(mr, sizeof(mr));
 
 	cd = exjson_get_val_from_key(config, HT_SERVER);
@@ -107,7 +107,7 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
 	fstat(ffd, &file_stat);
 #ifdef __linux__
 	if ( !sf ) {
-		by = ex_copy_data_from_file(mr);
+		by = ex_copy_data_from_file(mr, &len);
 	}
 #endif
 	/* Set the Content-Length according the file data */
