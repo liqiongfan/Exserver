@@ -8,15 +8,15 @@
 
 ## 什么是 Exserver ?
 
-**Exserver** 是一款**C**语言开发的兼容 **FreeBSD(mac OSx)** & **Linux** 系统的服务器软件，代码结构清晰、合理，适合当做纯静态博客网站或者学习 **socket**编程使用。
-
-
+**Exserver** 是一款**C**语言开发的兼容 **FreeBSD** & **Linux** 系统的服务器软件，代码结构清晰、合理，适合当做纯静态博客网站或者学习 **socket**编程使用。
 
 ## 特点
 
 多进程、事件机制
 
 **多进程**  **：** 主进程负责接受新的用户请求，然后发送到各个子进程的事件队列处理
+
+**事件机制** ：采用 epoll (Linux) 或者 kqueue (BSD)系统
 
 
 
@@ -25,6 +25,10 @@
 #### 配置文件  ####
 
 配置文件采用  **Exjson** 格式编写, **Exjson** 支持注释(注释支持 `#` 或者 `//`)
+
+**节点** `system`
+
+- **send_file**  ：**true** 或者 **false** 表示是否使用 sendfile 来完成零 **IO** 复制
 
 ##### 节点`server` #####
 
@@ -37,24 +41,23 @@
 
 ```json
 {
-  // 配置服务器
-  "server": [
-    {
-      "webroot": "/website/test",
-      "listen" : 8181,           
-      "host"   : "wwww.money.com"
+    // 配置系统参数
+    "system": {
+        "send_file": false
     },
-    {
-      "webroot": "/website/novel",
-      "listen" : 8181,
-      "host"   : "www.novel.com"
-    },
-    {
-      "webroot": "/website/data",
-      "listen" : 8181,
-      "host"   : "www.data.com"
-    }
-  ]
+    // 配置服务器
+    "server": [
+         {
+			"webroot": "/website/test",
+			"listen" : 8181,           
+			"host"   : "wwww.money.com"
+		 },
+    	 {
+			"webroot": "/website/novel",
+			"listen" : 8182,
+			"host"   : "www.novel.com"
+		 }
+	]
 }
 ```
 
