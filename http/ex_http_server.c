@@ -113,11 +113,11 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
 #endif
 	if ( req->keep_alive )
 	{
-		re = generate_response_string(200, "OK", by, 3, mr, cm, "Connection: keep-alive");
+		re = generate_response_string(200, "OK", by, 4, mr, cm, "Connection: keep-alive", "Server: Exserver/1.0");
 	}
 	else
 	{
-		re = generate_response_string(200, "OK", by, 3, mr, cm, "Connection: close");
+		re = generate_response_string(200, "OK", by, 4, mr, cm, "Connection: close", "Server: Exserver/1.0");
 	}
 
 #ifdef __linux__
