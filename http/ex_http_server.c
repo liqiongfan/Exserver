@@ -57,7 +57,7 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
 			im = 1; break;
 		}
 	}
-
+	
 	/* Get whether host is matched or not
 	 * if not matched send 404 not found to client. */
 	if ( !im ) {
@@ -73,11 +73,11 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
 	{
 		qp = strchr( req->request_url, '?' );
 		if ( qp )
-			rru = exsubstr( req->request_url, 1, qp - req->request_url, TRIM_NONE );
+			rru = exsubstr( req->request_url, 1, qp - req->request_url -1, TRIM_NONE );
 		else
 			rru = req->request_url + 1;
 	}
-
+	
 	/* Find the file data */
 	ex_memzero(mr, sizeof(mr));
 	sprintf(mr, "%s/%s", wr, rru);
@@ -137,7 +137,9 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
 #endif
 	close(ffd);
 	ex_memfree(re);
-	if ( by ) ex_memfree(by);
+    if ( !use_send ) {
+        ex_memfree(by);
+    }
 }
 
 static void ex_http_worker_run(int fd, int signo, int eid)
@@ -160,9 +162,10 @@ static void ex_http_worker_run(int fd, int signo, int eid)
 	if ( cfd == fd )
 	{
 		cld = ex_socket_recv_fd(cfd);
+		if ( cld <= 0 ) return ;
 
 		ex_make_fd_nonblock(cld);
-
+		
 		ex_add_to_events(eid, cld);
 	}
 	else
@@ -205,10 +208,11 @@ static void ex_http_worker_run(int fd, int signo, int eid)
 			}
 
 			destroy_exlist(s);
-			ex_memfree(buff);
 
 			if ( bl == np ) break;
 		}
+        
+        ex_memfree(buff);
 	}
 }
 
