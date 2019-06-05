@@ -35,6 +35,5 @@ int ex_socket_recv_fd(int fd);
 
 char *ex_read_requests2(int _fd, long *len);
 char *ex_read_num_data(int _fd, long len);
-char *ex_read_requests(int _fd, long *len);
 
 #endif /* EX_SOCKET_H */

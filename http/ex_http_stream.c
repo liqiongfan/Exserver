@@ -237,7 +237,9 @@ EX_RESPONSE_T *genereate_response_t(int code, char *msg, char *body, long body_l
 	/* HTTP body */
 	_ex_strncat_(&rs, "\r\n", EX_CON(ts, us));
 
-	if ( body_len )
+	res->length = us;
+
+	if ( body && body_len )
 	{
 		r = realloc( rs, sizeof(char)*(us + body_len) );
 		if ( r == NULL )
@@ -248,9 +250,10 @@ EX_RESPONSE_T *genereate_response_t(int code, char *msg, char *body, long body_l
 		rs = r;
 
 		ex_copymem(rs + us, body, body_len * sizeof(char));
+
+		res->length += body_len;
 	}
 
-	res->length = us + body_len;
 	res->response = rs;
 	return res;
 }

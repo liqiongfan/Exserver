@@ -5,13 +5,14 @@
 #include <ex_http_server.h>
 
 /* Parse the http web browser */
-void ex_parser_https(int fd, EX_REQUEST_T *req)
+void
+ex_parser_https(int fd, EX_REQUEST_T *req)
 {
 	EXJSON        *cd;
 	EX_RESPONSE_T *res;
 	int     i,     j,   im, ffd;
-	long    sp,    len, olen;
-	char    *wr,  *sh, *qp, *wi, *by, *re, *rru, *mime, cm[BUFFER_ALLOCATE_SIZE], mr[BUFFER_ALLOCATE_SIZE];
+	long    sp,    len  ;
+	char   *wr,   *sh, *qp, *wi, *by, *re, *rru, *mime, cm[BUFFER_ALLOCATE_SIZE], mr[BUFFER_ALLOCATE_SIZE];
 
 	sp  = 80;
 	len = im = 0;
@@ -150,7 +151,8 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
     }
 }
 
-static void ex_http_worker_run(int fd, int signo, int eid)
+static void
+ex_http_worker_run(int fd, int signo, int eid)
 {
 	/* fd is the descriptor which need to be read from,
 	 * signo is the signal number, and eid is the event fd */
@@ -222,7 +224,8 @@ static void ex_http_worker_run(int fd, int signo, int eid)
 	}
 }
 
-static void ex_http_worker(int index, void (*HTTP_FUNC)(int ,EX_REQUEST_T *))
+static void
+ex_http_worker(int index, void (*HTTP_FUNC)(int ,EX_REQUEST_T *))
 {
 	int fd, sid;
 
@@ -240,7 +243,8 @@ static void ex_http_worker(int index, void (*HTTP_FUNC)(int ,EX_REQUEST_T *))
 	ex_event_loop(fd, ex_http_worker_run);
 }
 
-void ex_gen_worker(int _n, void (*func)(int, EX_REQUEST_T *))
+void
+ex_gen_worker(int _n, void (*func)(int, EX_REQUEST_T *))
 {
 	char    *cd;
 	int      i, pid, re;
@@ -282,7 +286,8 @@ void ex_gen_worker(int _n, void (*func)(int, EX_REQUEST_T *))
 	}
 }
 
-void ex_htp_server_master_process(int fd, int signo, int efd)
+void
+ex_htp_server_master_process(int fd, int signo, int efd)
 {
 	int cid, did;
 
@@ -301,7 +306,8 @@ void ex_htp_server_master_process(int fd, int signo, int efd)
 	master_number++;
 }
 
-void ex_http_server_start(int fd)
+void
+ex_http_server_start(int fd)
 {
 	int sfd;
 	master_number = 0;
@@ -311,7 +317,8 @@ void ex_http_server_start(int fd)
 	ex_event_loop(sfd, ex_htp_server_master_process);
 }
 
-void ex_http_server_from_config()
+void
+ex_http_server_from_config()
 {
 	long    sp;
 	EXJSON *cd, *cs;

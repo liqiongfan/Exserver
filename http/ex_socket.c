@@ -8,7 +8,7 @@
 #include <ex_string.h>
 #include <ex_config.h>
 #include <ex_socket.h>
-#include "ex_http_stream.h"
+#include <ex_http_stream.h>
 
 int ex_create_socket(const char *host, uint16_t port)
 {
@@ -186,7 +186,7 @@ char *ex_read_requests2(int _fd, long *len)
 
 		for ( in = pp; in < un; in++ )
 		{
-			if ( ex_str3cmp(r + in, "GET") && nw )
+			if      ( ex_str3cmp(r + in, "GET") && nw )
 			{
 				nw = 0;
 				rm = HTTP_GET;
@@ -232,6 +232,7 @@ char *ex_read_requests2(int _fd, long *len)
 				else
 				{
 					/* Not GET method, need to get the Content-Length */
+					if ( in > un - 13 ) break;
 					if ( ex_str13ncmp(r + in, "content-length") )
 					{
 						bl = ex_get_cl(r, in);
@@ -274,85 +275,6 @@ char *ex_read_requests2(int _fd, long *len)
 			pp += rn;
 		}
 	}
-}
-
-char *ex_read_requests(int _fd, long *len)
-{
-    char *r,  *v,  *b,  *nv, tf[BUFFER_SIZE];
-    long  rn,  an,  un,  gp, cp, mp, cl, lv;
-    
-    cp = un = an = 0;
-    r  = NULL;
-
-    for ( ;; )
-    {
-        ex_memzero(tf, sizeof(tf));
-        rn = read(_fd, tf, sizeof(char) * BUFFER_SIZE);
-        if ( rn == -1 && errno == EAGAIN) continue;
-        if ( rn == 0 ) return r;
-        
-        an += rn;
-        *len += rn;
-        v = realloc(r, sizeof(char) * an);
-        if ( v == NULL )
-        {
-            free(r);
-            return NULL;
-        }
-        r = v;
-        
-        ex_copymem(r + un, tf, sizeof(char) * rn);
-        un += rn;
-    
-        cp = ex_strirncasestr(r, un, EX_STRL("Content-Length"));
-        gp = ex_strirncasestr(r, un, EX_STRL("GET"));
-        
-        if ( cp != -1 )
-        {
-            cl = ex_get_cl(r, cp);
-            if ( cl == -1 ) continue;
-            
-            if ( cp < gp )
-            {
-                if ( r[un-1] == '\n' && r[un-2] == '\r' && r[un-3] == '\n' && r[un-4] == '\r' )
-                {
-                    return r;
-                }
-            }
-            else
-            {
-                b  = strstr(r + cp, "\r\n\r\n");
-    
-                if ( b )
-                {
-                    lv = cl - (un - (b - r) - 4);
-                    if ( lv == 0 ) return r;
-        
-                    nv = ex_read_num_data(_fd, lv);
-                    v = realloc(r, sizeof(char) * ( un + lv ));
-                    r = v;
-                    *len += lv;
-                    ex_copymem(r + un, nv, sizeof(char) * lv);
-                    ex_memfree(nv);
-                    return r;
-                }
-                else
-                {
-                    continue;
-                }
-            }
-        }
-        else
-        {
-            if ( cp < gp )
-            {
-                if ( r[un-1] == '\n' && r[un-2] == '\r' && r[un-3] == '\n' && r[un-4] == '\r' )
-                {
-                    return r;
-                }
-            }
-        }
-    }
 }
 
 int ex_socket_send_fd(int fd, int fd_to_send)
