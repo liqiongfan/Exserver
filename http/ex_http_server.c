@@ -7,10 +7,11 @@
 /* Parse the http web browser */
 void ex_parser_https(int fd, EX_REQUEST_T *req)
 {
-	EXJSON *cd;
-	int     i,    j,  im, ffd;
-	long    sp,   len;
-	char    *wr, *sh, *qp, *wi, *by, *re, *rru, *mime, cm[BUFFER_ALLOCATE_SIZE], mr[BUFFER_ALLOCATE_SIZE];
+	EXJSON        *cd;
+	EX_RESPONSE_T *res;
+	int     i,     j,   im, ffd;
+	long    sp,    len, olen;
+	char    *wr,  *sh, *qp, *wi, *by, *re, *rru, *mime, cm[BUFFER_ALLOCATE_SIZE], mr[BUFFER_ALLOCATE_SIZE];
 
 	sp  = 80;
 	len = im = 0;
@@ -57,7 +58,7 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
 			im = 1; break;
 		}
 	}
-
+	
 	/* Get whether host is matched or not
 	 * if not matched send 404 not found to client. */
 	if ( !im ) {
@@ -73,11 +74,11 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
 	{
 		qp = strchr( req->request_url, '?' );
 		if ( qp )
-			rru = exsubstr( req->request_url, 1, qp - req->request_url, TRIM_NONE );
+			rru = exsubstr( req->request_url, 1, qp - req->request_url -1, TRIM_NONE );
 		else
 			rru = req->request_url + 1;
 	}
-
+	
 	/* Find the file data */
 	ex_memzero(mr, sizeof(mr));
 	sprintf(mr, "%s/%s", wr, rru);
@@ -89,7 +90,10 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
 	/* Open the file */
 	ffd = open(mr, O_RDONLY);
 	if ( ffd == -1 ) {
-		return send_404_response(fd, req->keep_alive);
+		if ( errno == EACCES )
+			return send_403_response(fd, req->keep_alive);
+		else
+			return send_404_response(fd, req->keep_alive);
 	}
 
 	ex_memzero(cm, sizeof(cm));
@@ -98,7 +102,11 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
 
 	/* Get the file stat info. */
 	struct stat file_stat;
-	fstat(ffd, &file_stat);
+	if ( fstat(ffd, &file_stat) == -1 )
+	{
+		return send_403_response(fd, req->keep_alive);
+	}
+
 #ifdef __linux__
 	if ( !use_send ) {
 		by = ex_copy_data_from_file(mr, &len);
@@ -113,15 +121,14 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
 #endif
 	if ( req->keep_alive )
 	{
-		re = generate_response_string(200, "OK", by, 4, mr, cm, "Connection: keep-alive", "Server: Exserver/1.0");
+		res = genereate_response_t(200, "OK", by, len, 4, mr, cm, "Connection: keep-alive", "Server: Exserver/1.0");
 	}
 	else
 	{
-		re = generate_response_string(200, "OK", by, 4, mr, cm, "Connection: close", "Server: Exserver/1.0");
+		res = genereate_response_t(200, "OK", by, len, 4, mr, cm, "Connection: close", "Server: Exserver/1.0");
 	}
-
 #ifdef __linux__
-	write(fd, re, strlen(re));
+	write(fd, res->response, res->length * sizeof(char));
 	if ( use_send )
 	{
 		sendfile(fd, ffd, NULL, (size_t)file_stat.st_size);
@@ -136,8 +143,11 @@ void ex_parser_https(int fd, EX_REQUEST_T *req)
     sendfile( ffd, fd, 0, ( off_t * )file_stat.st_size, &sf_hdtr1, 0 );
 #endif
 	close(ffd);
-	ex_memfree(re);
-	if ( by ) ex_memfree(by);
+	ex_memfree(res->response);
+	ex_memfree(res);
+    if ( !use_send ) {
+        ex_memfree(by);
+    }
 }
 
 static void ex_http_worker_run(int fd, int signo, int eid)
@@ -160,15 +170,17 @@ static void ex_http_worker_run(int fd, int signo, int eid)
 	if ( cfd == fd )
 	{
 		cld = ex_socket_recv_fd(cfd);
+		if ( cld <= 0 ) return ;
 
 		ex_make_fd_nonblock(cld);
-
+		
 		ex_add_to_events(eid, cld);
 	}
 	else
 	{
 		buff = ex_read_requests(fd, &bl);
-
+		ex_logger(LOG_INFO, "%s", buff);
+		
 		if ( !buff )
 		{
 			ex_del_from_events(eid, fd);
@@ -205,10 +217,11 @@ static void ex_http_worker_run(int fd, int signo, int eid)
 			}
 
 			destroy_exlist(s);
-			ex_memfree(buff);
 
 			if ( bl == np ) break;
 		}
+        
+        ex_memfree(buff);
 	}
 }
 

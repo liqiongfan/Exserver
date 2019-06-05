@@ -196,58 +196,72 @@ EXLIST *ex_parse_query_string(const char *qs)
 	return result_list;
 }
 
-char *generate_response_string(int code, char *msg, char *body, int n, ...)
+EX_RESPONSE_T *genereate_response_t(int code, char *msg, char *body, long body_len, int n, ...)
 {
-	char code_str[35] = {0}, *header;
-	va_list args;
-	size_t total_size = 1, used_size = 0;
-	char *response_stream = malloc(sizeof(char));
-	if ( response_stream == NULL ) return NULL;
-	memset(response_stream, 0, sizeof( char ));
+	va_list        args;
+	char          *hr,    *r,  cs[35], *rs;
+	size_t         ts,     us;
+	EX_RESPONSE_T *res;
 
-	/* HTTP protocol */
-	_ex_strncat_(&response_stream, "HTTP/1.1 ", EX_CON(total_size, used_size));
+	ts = 1;
+	us = 0;
+
+	res = malloc(sizeof(EX_RESPONSE_T));
+	if ( res == NULL ) return NULL;
+	ex_memzero(res, sizeof(EX_RESPONSE_T));
+
+	rs = malloc(sizeof(char));
+	if ( rs == NULL ) return NULL;
+	ex_memzero(rs, sizeof(char));
+
+	_ex_strncat_(&rs, "HTTP/1.1 ", EX_CON(ts, us));
 
 	/* HTTP status code  */
-	sprintf(code_str, "%d ", code);
-	_ex_strncat_(&response_stream, code_str, EX_CON(total_size, used_size));
+	sprintf(cs, "%d ", code);
+	_ex_strncat_(&rs, cs, EX_CON(ts, us));
 
 	/* HTTP status msg */
-	_ex_strncat_(&response_stream, msg, EX_CON(total_size, used_size));
-	_ex_strncat_(&response_stream, "\r\n", EX_CON(total_size, used_size));
+	_ex_strncat_(&rs, msg, EX_CON(ts, us));
+	_ex_strncat_(&rs, "\r\n", EX_CON(ts, us));
 
-	/* HTTP Content-Length */
-/*
-    memset(code_str, 0, sizeof(code_str));
-    sprintf(code_str, "Content-Length: %ld\r\n", strlen(body));
-    _ex_strncat_(&response_stream, code_str, EX_CON(total_size, used_size));
-*/
-
-	/* Add the HTTP headers */
 	va_start(args, n);
 	while(true)
 	{
 		if ( !n-- ) break;
-		header = va_arg(args, char *);
-		_ex_strncat_(&response_stream, header, EX_CON(total_size, used_size));
-		_ex_strncat_(&response_stream, "\r\n", EX_CON(total_size, used_size));
+		hr = va_arg(args, char *);
+		_ex_strncat_(&rs, hr, EX_CON(ts, us));
+		_ex_strncat_(&rs, "\r\n", EX_CON(ts, us));
 	}
 	va_end(args);
 
 	/* HTTP body */
-	_ex_strncat_(&response_stream, "\r\n", EX_CON(total_size, used_size));
-	if ( body )
-		_ex_strncat_(&response_stream, body, EX_CON(total_size, used_size));
+	_ex_strncat_(&rs, "\r\n", EX_CON(ts, us));
 
-	return response_stream;
+	if ( body_len )
+	{
+		r = realloc( rs, sizeof(char)*(us + body_len) );
+		if ( r == NULL )
+		{
+			free(rs);
+			return NULL;
+		}
+		rs = r;
+
+		ex_copymem(rs + us, body, body_len * sizeof(char));
+	}
+
+	res->length = us + body_len;
+	res->response = rs;
+	return res;
 }
 
 void send_404_response(int _fd, int keep)
 {
-	char *response;
+	EX_RESPONSE_T *res;
+
 	if ( keep ) {
-		response = generate_response_string(
-				404, "Not Found", "Not Found",
+		res = genereate_response_t(
+				404, "Not Found", EX_STRL("Not Found"),
 				3,
 				"Connection: keep-alive",
 				"Content-Type: text/html",
@@ -256,19 +270,48 @@ void send_404_response(int _fd, int keep)
 	}
 	else
 	{
-		response = generate_response_string(
-				404, "Not Found", "Not Found",
+		res = genereate_response_t(
+				404, "Not Found", EX_STRL("Not Found"),
 				3,
 				"Connection: close",
 				"Content-Type: text/html",
 				"Content-Length: 9"
 		);
 	}
-	write(_fd, response, strlen(response));
-	free(response);
+	write(_fd, res->response, res->length * sizeof(char));
+	ex_memfree(res->response);
+	ex_memfree(res);
 }
 
-char *generate_request_string(char *method, char *url, char *body, int n, ...)
+void send_403_response(int _fd, int keep)
+{
+	EX_RESPONSE_T *res;
+
+	if ( keep ) {
+		res = genereate_response_t(
+				403, "Forbidden", EX_STRL("Forbidden"),
+				3,
+				"Connection: keep-alive",
+				"Content-Type: text/html",
+				"Content-Length: 9"
+		);
+	}
+	else
+	{
+		res = genereate_response_t(
+				403, "Forbidden", EX_STRL("Forbidden"),
+				3,
+				"Connection: close",
+				"Content-Type: text/html",
+				"Content-Length: 9"
+		);
+	}
+	write(_fd, res->response, res->length * sizeof(char));
+	ex_memfree(res->response);
+	ex_memfree(res);
+}
+
+char *generate_request_string(char *method, char *url, char *body, long blen, int n, ...)
 {
 	char *header, code_str[35] = {0};
 	va_list args;
@@ -360,7 +403,7 @@ char *ex_copy_data_from_file(char *file, long *size)
 	r  = NULL;
 	ul = al = 0;
 
-	fp = fopen(file, "r+");
+	fp = fopen(file, "r");
 	if ( fp == NULL ) return NULL;
 
 	while (true)

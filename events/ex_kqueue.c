@@ -89,6 +89,7 @@ inline void ex_event_loop(int fd, void (*func)(int, int, int))
         {
             if ( events[j].flags & ( EV_ERROR | EV_EOF ))
             {
+                ex_del_from_events(fd, (int)events[j].ident);
                 close( ( int )events[j].ident );
                 continue;
             }
@@ -96,7 +97,7 @@ inline void ex_event_loop(int fd, void (*func)(int, int, int))
             if (   events[j].filter == EV_READ
                 || events[j].filter == EV_WRITE )
             {
-                func(events[j].ident, events[j].filter, fd);
+                func((int)events[j].ident, events[j].filter, fd);
             }
         }
     }
