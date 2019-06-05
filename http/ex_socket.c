@@ -8,6 +8,7 @@
 #include <ex_string.h>
 #include <ex_config.h>
 #include <ex_socket.h>
+#include "ex_http_stream.h"
 
 int ex_create_socket(const char *host, uint16_t port)
 {
@@ -150,6 +151,129 @@ char *ex_read_num_data(int _fd, long len)
     }
     
     return r;
+}
+
+char *ex_read_requests2(int _fd, long *len)
+{
+	static char     rm,  nw;
+	char *r,  *v,  *nv,  tf[BUFFER_SIZE];
+	long  rn,  an,  un,  in,  pp,  bl, nl, ll;
+
+	nw = 1;
+	rm = 0;
+	pp = un = an = ll = bl = nl = 0;
+	r  = NULL;
+
+	for ( ;; )
+	{
+		ex_memzero(tf, sizeof(tf));
+		rn = read(_fd, tf, sizeof(char) * BUFFER_SIZE);
+		if ( rn == -1 && errno == EAGAIN ) continue;
+		if ( rn == 0 ) { close(_fd); return r; }
+
+		an  += rn + 1;
+	   *len += rn;
+		v = realloc(r, sizeof(char) * an);
+		if ( v == NULL )
+		{
+			ex_memfree(r);
+			return NULL;
+		}
+		r = v;
+
+		ex_copymem(r + un, tf, sizeof(char) * rn);
+		un += rn;
+
+		for ( in = pp; in < un; in++ )
+		{
+			if ( ex_str3cmp(r + in, "GET") && nw )
+			{
+				nw = 0;
+				rm = HTTP_GET;
+			}
+			else if ( ex_str3cmp(r + in, "PUT") && nw )
+			{
+				nw = 0;
+				rm = HTTP_PUT;
+			}
+			else if ( ex_str4cmp(r + in, "POST") && nw )
+			{
+				nw = 0;
+				rm = HTTP_POST;
+			}
+			else if ( ex_str7cmp(r +in, "OPTIONS") && nw )
+			{
+				nw = 0;
+				rm = HTTP_OPTIONS;
+			}
+			else if ( ex_str6cmp(r +in, "DELETE") && nw )
+			{
+				nw = 0;
+				rm = HTTP_DELETE;
+			}
+
+			if ( nw == 0 )
+			{
+				if ( rm == HTTP_GET )
+				{
+					if ( r[in] != '\r' && r[in] != '\n' )
+					{
+						continue;
+					}
+					if ( ex_str4cmp(r + in, "\r\n\r\n") )
+					{
+						nw = 1;
+						if ( in == un - 4 ) {
+							r[an-1] = '\0';
+							return r;
+						}
+					}
+				}
+				else
+				{
+					/* Not GET method, need to get the Content-Length */
+					if ( ex_str13ncmp(r + in, "content-length") )
+					{
+						bl = ex_get_cl(r, in);
+
+						if ( bl == -1 ) break;
+
+						for ( nl = in; nl < un ; nl++ )
+						{
+							if ( ex_str4cmp( r + nl, "\r\n\r\n") )
+							{
+								ll = un - nl - 4;
+
+								ll = bl - ll;
+								if ( ll == 0 ) {
+									return r;
+								}
+								else
+								{
+									nv = ex_read_num_data(_fd, ll);
+									v  = realloc(r, sizeof(char) * (un + ll));
+									if ( v == NULL)
+									{
+										ex_memfree(r);
+										return NULL;
+									}
+									r = v;
+									*len += ll;
+									ex_copymem(r + un, nv, sizeof(char) * ll);
+									ex_memfree(nv);
+									return r;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if ( nw ) {
+			pp += rn;
+		}
+	}
 }
 
 char *ex_read_requests(int _fd, long *len)

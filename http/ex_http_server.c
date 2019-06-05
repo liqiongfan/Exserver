@@ -178,13 +178,10 @@ static void ex_http_worker_run(int fd, int signo, int eid)
 	}
 	else
 	{
-		buff = ex_read_requests(fd, &bl);
-		ex_logger(LOG_INFO, "%s", buff);
+		buff = ex_read_requests2(fd, &bl);
 		
 		if ( !buff )
 		{
-			ex_del_from_events(eid, fd);
-
 			close(fd);
 
 			return ;

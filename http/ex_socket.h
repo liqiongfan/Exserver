@@ -33,6 +33,7 @@ int ex_connect_socket(int fd, const char *host, uint16_t port);
 int ex_socket_send_fd(int fd, int fd_to_send);
 int ex_socket_recv_fd(int fd);
 
+char *ex_read_requests2(int _fd, long *len);
 char *ex_read_num_data(int _fd, long len);
 char *ex_read_requests(int _fd, long *len);
 

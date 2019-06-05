@@ -50,6 +50,10 @@ typedef struct _EX_RESPONSE_T
 	long     length;
 } EX_RESPONSE_T;
 
+enum {
+	HTTP_GET, HTTP_PUT, HTTP_POST, HTTP_DELETE, HTTP_OPTIONS
+};
+
 #define EX_HOST     "Host"
 #define EX_METHOD   "request_method"
 #define EX_URL      "request_uri"
