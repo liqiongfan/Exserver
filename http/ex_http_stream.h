@@ -79,6 +79,7 @@ EX_RESPONSE_T *genereate_response_t(int code, char *msg, char *body, long body_l
 char *generate_request_string(char *method, char *url, char *body, long blen, int n, ...);
 
 /* Some apis for special HTTP status code response */
+void send_500_response(int _fd, int keep);
 void send_404_response(int _fd, int keep);
 void send_403_response(int _fd, int keep);
 

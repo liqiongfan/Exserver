@@ -161,7 +161,8 @@ char *ex_read_requests2(int _fd, long *len)
 
 	nw = 1;
 	rm = 0;
-	pp = un = an = ll = bl = nl = 0;
+	pp = un = 0;
+	an = 1;
 	r  = NULL;
 
 	for ( ;; )
@@ -169,9 +170,10 @@ char *ex_read_requests2(int _fd, long *len)
 		ex_memzero(tf, sizeof(tf));
 		rn = read(_fd, tf, sizeof(char) * BUFFER_SIZE);
 		if ( rn == -1 && errno == EAGAIN ) continue;
+		if ( rn == -1 && errno == EPIPE ) return NULL;
 		if ( rn == 0 ) { close(_fd); return r; }
 
-		an  += rn + 1;
+		an  += rn;
 	   *len += rn;
 		v = realloc(r, sizeof(char) * an);
 		if ( v == NULL )
@@ -220,13 +222,11 @@ char *ex_read_requests2(int _fd, long *len)
 					{
 						continue;
 					}
-					if ( ex_str4cmp(r + in, "\r\n\r\n") )
+					if ( r[in] == '\r' && r[in + 1] == '\n' && r[in+2] == '\r' && r[in+3] == '\n')
 					{
 						nw = 1;
-						if ( in == un - 4 ) {
-							r[an-1] = '\0';
-							return r;
-						}
+						r[*len] = '\0';
+						return r;
 					}
 				}
 				else

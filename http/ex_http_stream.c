@@ -258,6 +258,34 @@ EX_RESPONSE_T *genereate_response_t(int code, char *msg, char *body, long body_l
 	return res;
 }
 
+void send_500_response(int _fd, int keep)
+{
+    EX_RESPONSE_T *res;
+    
+    if ( keep ) {
+        res = genereate_response_t(
+            500, "Internal Error", EX_STRL("Internal Error"),
+            3,
+            "Connection: keep-alive",
+            "Content-Type: text/html",
+            "Content-Length: 9"
+        );
+    }
+    else
+    {
+        res = genereate_response_t(
+            404, "Internal Error", EX_STRL("Internal Error"),
+            3,
+            "Connection: close",
+            "Content-Type: text/html",
+            "Content-Length: 9"
+        );
+    }
+    write(_fd, res->response, res->length * sizeof(char));
+    ex_memfree(res->response);
+    ex_memfree(res);
+}
+
 void send_404_response(int _fd, int keep)
 {
 	EX_RESPONSE_T *res;
@@ -420,7 +448,7 @@ char *ex_copy_data_from_file(char *file, long *size)
 		fseek(fp, al, SEEK_SET);
 		tr = realloc(r, sizeof(char) * al);
 		if ( tr == NULL ) {
-			free(r);
+			ex_memfree(r);
 			break;
 		}
 		r = tr;

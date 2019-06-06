@@ -7,13 +7,13 @@
     "servers": [
         {
             "host"   : "www.money.com",
-            "listen" :  8181,
+            "listen" :  8182,
             "webroot": "/website/test",
             "index"  : "index.html"
         },
         {
             "host"   : "www.novel.com",
-            "listen" :  8182,
+            "listen" :  8183,
             "webroot": "/website/novel",
             "index"  : "index.html"
         }
