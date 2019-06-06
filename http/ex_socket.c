@@ -171,8 +171,8 @@ char *ex_read_requests2(int _fd, long *len)
 		rn = read(_fd, tf, sizeof(char) * BUFFER_SIZE);
 		if ( rn == -1 && errno == EAGAIN ) continue;
 		if ( rn == -1 && errno == EPIPE ) return NULL;
-		if ( rn == 0 ) { close(_fd); return r; }
-
+		if ( rn == 0 ) { return r; }
+		
 		an  += rn;
 	   *len += rn;
 		v = realloc(r, sizeof(char) * an);

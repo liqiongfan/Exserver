@@ -9,13 +9,27 @@
 #include <ex_events.h>
 
 #pragma clang diagnostic push
-#pragma ide diagnostic ignored   "UnusedValue"
+#pragma ide diagnostic ignored    "missing_default_case"
+#pragma ide diagnostic ignored    "UnusedValue"
 #pragma clang diagnostic ignored "-Wunused-parameter"
-#pragma ide diagnostic ignored   "OCUnusedGlobalDeclarationInspection"
+#pragma ide diagnostic ignored    "OCUnusedGlobalDeclarationInspection"
+
+static void sigaction_handler(int sig, siginfo_t *si, void *context)
+{
+    switch (sig)
+    {
+        case SIGCHLD:
+            while(waitpid(-1, NULL, WNOHANG) != -1)
+            {
+                ;
+            }
+        
+    }
+}
 
 void ex_server_parse(int fd, EX_REQUEST_T *req)
 {
-    int              i,       j,      im,     re;
+    int              i,       j,      im,     re,    md;
     char            *wr,     *sh,    *wi,    *qp,    cm[BUFFER_ALLOCATE_SIZE],    *rv,    mr[BUFFER_ALLOCATE_SIZE];
     long             sp,      bl;
     EX_RESPONSE_T   *res;
@@ -90,20 +104,22 @@ void ex_server_parse(int fd, EX_REQUEST_T *req)
     sprintf(mr, "%s/%s", wr, rv);
     if ( qp ) ex_memfree(rv);
     
-    re = open(mr, O_RDONLY);
-    if ( re == -1 )
+    md = open(mr, O_RDONLY);
+    if ( md == -1 )
     {
         if ( errno == EACCES )
         {
+            close(md);
             return send_403_response(fd, req->keep_alive);
         }
-        
+        close(md);
         return send_404_response(fd, req->keep_alive);
     }
     
-    re = fstat(re, &fs);
+    re = fstat(md, &fs);
     if ( re == -1 )
     {
+        close(md);
         return send_404_response(fd, req->keep_alive);
     }
     
@@ -134,6 +150,7 @@ void ex_server_parse(int fd, EX_REQUEST_T *req)
     ex_memfree(res->response);
     ex_memfree(res);
     ex_memfree(rv);
+    close(md);
 }
 
 void ex_http_loop(int fd, int signo, int efd)
@@ -145,8 +162,6 @@ void ex_http_loop(int fd, int signo, int efd)
     EX_HTTP_HEADER *header;
     int             cfd,    rcd;
     long            len,    np;
-    
-    len = np = 0;
     
     rcd = WORKER_SOCKETS[process_index][1];
     
@@ -160,33 +175,36 @@ void ex_http_loop(int fd, int signo, int efd)
     }
     else
     {
-        bf = ex_read_requests2(fd, &len);
-    
+        len = 0;
+        bf  = ex_read_requests2(fd, &len);
+        
         if ( bf )
         {
+            np = 0;
+            
             while (true)
             {
                 s = ex_parse_http_stream(bf, len, &np);
-            
+
                 ex_memzero(&req, sizeof(EX_REQUEST_T));
-            
+
                 EXLIST_FOREACH(s, ptr) {
                     header = ELV_VALUE_P(ptr);
                     ex_init_request(header, ptr, &req);
                 } EXLIST_FOREACH_END();
-            
+                
                 if ( http_back ) http_back(fd, &req);
                 else ex_server_parse(fd, &req);
-            
+
                 if ( !req.keep_alive )
                 {
                     shutdown(fd, SHUT_WR);
                     close(fd); /* After sending the FIN to close the fd. */
                 }
-            
+
                 /* Free the exlist HTTP header info. */
                 destroy_exlist(s);
-            
+
                 /* When getting the end of the buff */
                 if (len == np) break;
             }
@@ -220,13 +238,21 @@ void ex_http_worker_init(int n, FUNC func)
     long    l;
     int     i,  re;
     char   *s;
+    struct sigaction sig;
     
     l       = 0;
     s       = ex_copy_data_from_file("../conf/exserver.exjson", &l);
     config  = decode_json(s);
     ex_memfree(s);
     
-    signal(SIGPIPE, SIG_IGN);
+    ex_memzero(&sig, sizeof(sig));
+    sig.sa_handler = SIG_IGN;
+    sigaction(SIGPIPE, &sig, NULL);
+    
+    sig.sa_sigaction = sigaction_handler;
+    sigemptyset(&sig.sa_mask);
+    sig.sa_flags = SA_SIGINFO;
+    sigaction(SIGCHLD, &sig, NULL);
     
     current_process_number  = n;
     

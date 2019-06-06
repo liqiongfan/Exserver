@@ -265,7 +265,8 @@ void send_500_response(int _fd, int keep)
     if ( keep ) {
         res = genereate_response_t(
             500, "Internal Error", EX_STRL("Internal Error"),
-            3,
+            4,
+            "Server: Exserver/1.0",
             "Connection: keep-alive",
             "Content-Type: text/html",
             "Content-Length: 9"
@@ -275,7 +276,8 @@ void send_500_response(int _fd, int keep)
     {
         res = genereate_response_t(
             404, "Internal Error", EX_STRL("Internal Error"),
-            3,
+            4,
+            "Server: Exserver/1.0",
             "Connection: close",
             "Content-Type: text/html",
             "Content-Length: 9"
@@ -292,21 +294,23 @@ void send_404_response(int _fd, int keep)
 
 	if ( keep ) {
 		res = genereate_response_t(
-				404, "Not Found", EX_STRL("Not Found"),
-				3,
-				"Connection: keep-alive",
-				"Content-Type: text/html",
-				"Content-Length: 9"
+            404, "Not Found", EX_STRL("Not Found"),
+            4,
+            "Server: Exserver/1.0",
+            "Connection: keep-alive",
+            "Content-Type: text/html",
+            "Content-Length: 9"
 		);
 	}
 	else
 	{
 		res = genereate_response_t(
-				404, "Not Found", EX_STRL("Not Found"),
-				3,
-				"Connection: close",
-				"Content-Type: text/html",
-				"Content-Length: 9"
+            404, "Not Found", EX_STRL("Not Found"),
+            4,
+            "Server: Exserver/1.0",
+            "Connection: close",
+            "Content-Type: text/html",
+            "Content-Length: 9"
 		);
 	}
 	write(_fd, res->response, res->length * sizeof(char));
@@ -320,21 +324,23 @@ void send_403_response(int _fd, int keep)
 
 	if ( keep ) {
 		res = genereate_response_t(
-				403, "Forbidden", EX_STRL("Forbidden"),
-				3,
-				"Connection: keep-alive",
-				"Content-Type: text/html",
-				"Content-Length: 9"
+            403, "Forbidden", EX_STRL("Forbidden"),
+            4,
+            "Server: Exserver/1.0",
+            "Connection: keep-alive",
+            "Content-Type: text/html",
+            "Content-Length: 9"
 		);
 	}
 	else
 	{
 		res = genereate_response_t(
-				403, "Forbidden", EX_STRL("Forbidden"),
-				3,
-				"Connection: close",
-				"Content-Type: text/html",
-				"Content-Length: 9"
+            403, "Forbidden", EX_STRL("Forbidden"),
+            4,
+            "Server: Exserver/1.0",
+            "Connection: close",
+            "Content-Type: text/html",
+            "Content-Length: 9"
 		);
 	}
 	write(_fd, res->response, res->length * sizeof(char));
