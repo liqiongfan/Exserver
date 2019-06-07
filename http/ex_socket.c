@@ -172,9 +172,6 @@ long ex_check_http_stream(const char *stream, long stream_len)
         rm = HTTP_DELETE;
     }
     
-    ex_logger(LOG_INFO, "%s", stream);
-    
-    
     for ( ; i < stream_len; i++ )
     {
         if ( ex_str13ncmp(stream +i, "content-length") )
@@ -198,7 +195,6 @@ long ex_check_http_stream(const char *stream, long stream_len)
                     }
                     else
                     {
-                        ex_logger(LOG_ERROR, "[[%s]:%d]", stream, ll);
                         return ll;
                     }
                 }
