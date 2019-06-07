@@ -250,8 +250,6 @@ char *ex_read_requests2(int _fd, long *len)
         {
             nv = ex_read_num_data( _fd, ll );
     
-            ex_logger(LOG_ERROR, "[[%s:%d]]", nv, ll);
-            
             v  = realloc( r, sizeof( char ) * ( an + ll ) );
             if ( v == NULL )
             {
