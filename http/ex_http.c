@@ -4,6 +4,7 @@
 
 #include <ex_types.h>
 #include <exjson.h>
+#include <ex_config.h>
 #include <ex_http.h>
 #include <signal.h>
 #include <ex_events.h>
@@ -33,6 +34,7 @@ void ex_server_parse(int fd, EX_REQUEST_T *req)
     char            *wr,     *sh,    *wi,    *qp,    cm[BUFFER_ALLOCATE_SIZE],    *rv,    mr[BUFFER_ALLOCATE_SIZE];
     long             sp,      bl;
     EX_RESPONSE_T   *res;
+    
     EXJSON          *server;
     struct stat      fs;
     
@@ -158,7 +160,6 @@ void ex_http_loop(int fd, int signo, int efd)
     char           *bf;
     EXLIST         *s;
     EX_REQUEST_T    req;
-    EX_RESPONSE_T  *res;
     EX_HTTP_HEADER *header;
     int             cfd,    rcd;
     long            len,    np;

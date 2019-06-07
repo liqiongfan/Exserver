@@ -531,7 +531,7 @@ void ex_init_request(EX_HTTP_HEADER *header, EXLIST_V *ptr, EX_REQUEST_T *req)
             req->http_version_i = 2;
             req->keep_alive     = 1;
         }
-
+    
         /* Next is HTTP headers */
         req->headers = ELV_NEXT_P(ptr);
     }

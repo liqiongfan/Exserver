@@ -109,60 +109,120 @@ char *ex_read_num_data(int _fd, long len)
     
     un = 0;
     
-    if ( len <= BUFFER_SIZE )
+    ln = len;
+    
+    for ( ;; )
     {
-        ex_memzero(tf, sizeof(tf));
-        rn = read(_fd, tf, sizeof(char) * len);
-        if ( rn )
-        {
-            ex_copymem(r, tf, sizeof(char) * len);
-        }
-    }
-    else
-    {
-        ln = len;
+        if ( ln == 0 ) break;
         
-        for ( ;; )
+        if ( ln >= BUFFER_SIZE )
+            en = BUFFER_SIZE;
+        else
+            en = ln;
+        
+        ex_memzero(tf, sizeof(tf));
+        rn = read(_fd, tf, sizeof(char) * en);
+        if ( rn == -1
+            && (errno == EAGAIN || errno == EWOULDBLOCK) )
         {
-            if (ln == 0) break;
-            
-            if ( ln >= BUFFER_SIZE )
-                en = BUFFER_SIZE;
-            else
-                en = ln;
-            
-            ex_memzero(tf, sizeof(tf));
-            rn = read(_fd, tf, sizeof(char) * en);
-            if ( rn == -1
-                && (errno == EAGAIN || errno == EWOULDBLOCK) )
-            {
-                continue;
-            }
-            if ( rn )
-            {
-                ex_copymem( r + un, tf, sizeof(char) * en );
-            }
-            
+            continue;
+        }
+        if ( rn > 0 )
+        {
+            ex_copymem( r + un, tf, sizeof(char) * en );
             un += rn;
             ln -= rn;
-            
-            if ( rn < BUFFER_SIZE && !ln ) break;
         }
     }
     
     return r;
 }
 
+long ex_check_http_stream(const char *stream, long stream_len)
+{
+    
+    int     i,  rm;
+    long    bl, nl, ll;
+    
+    rm  = i = 0;
+    
+    if ( ex_str3cmp(stream, "GET") )
+    {
+        i = 2;
+        rm = HTTP_GET;
+    }
+    else if ( ex_str3cmp(stream, "PUT") )
+    {
+        i = 2;
+        rm = HTTP_PUT;
+    }
+    else if ( ex_str4cmp(stream, "POST") )
+    {
+        i = 3;
+        rm = HTTP_POST;
+    }
+    else if ( ex_str7cmp(stream, "OPTIONS") )
+    {
+        i = 6;
+        rm = HTTP_OPTIONS;
+    }
+    else if ( ex_str6cmp(stream, "DELETE") )
+    {
+        i = 5;
+        rm = HTTP_DELETE;
+    }
+    
+    ex_logger(LOG_INFO, "%s", stream);
+    
+    
+    for ( ; i < stream_len; i++ )
+    {
+        if ( ex_str13ncmp(stream +i, "content-length") )
+        {
+            bl = ex_get_cl(stream, i);
+    
+            if ( bl == -1 ) return -1;
+            
+            if ( bl == 0 ) break;
+    
+            for ( nl = i; nl < stream_len ; nl++ )
+            {
+                if ( ex_str4cmp( stream + nl, "\r\n\r\n") )
+                {
+                    ll = stream_len - nl - 4;
+            
+                    ll = bl - ll;
+                    if ( ll == 0 )
+                    {
+                        return 0;
+                    }
+                    else
+                    {
+                        ex_logger(LOG_ERROR, "[[%s]:%d]", stream, ll);
+                        return ll;
+                    }
+                }
+            }
+        }
+    }
+    
+    /* Not need Content-Length */
+    if ( stream[stream_len - 1] == '\n' &&
+         stream[stream_len - 2] == '\r' &&
+         stream[stream_len - 3] == '\n' &&
+         stream[stream_len - 4] == '\r' )
+        return 0;
+    else
+        return -1;
+}
+
 char *ex_read_requests2(int _fd, long *len)
 {
-	static char     rm,  nw;
 	char *r,  *v,  *nv,  tf[BUFFER_SIZE];
-	long  rn,  an,  un,  in,  pp,  bl, nl, ll;
+	long  rn,  an,  un,  ll;
 
-	nw = 1;
-	rm = 0;
-	pp = un = 0;
-	an = 1;
+	un = 0;
+	an = 0;
 	r  = NULL;
 
 	for ( ;; )
@@ -171,7 +231,7 @@ char *ex_read_requests2(int _fd, long *len)
 		rn = read(_fd, tf, sizeof(char) * BUFFER_SIZE);
 		if ( rn == -1 && errno == EAGAIN ) continue;
 		if ( rn == -1 && errno == EPIPE ) return NULL;
-		if ( rn == 0 ) { return r; }
+		if ( rn == 0 ) { close(_fd); return r; }
 		
 		an  += rn;
 	   *len += rn;
@@ -185,95 +245,29 @@ char *ex_read_requests2(int _fd, long *len)
 
 		ex_copymem(r + un, tf, sizeof(char) * rn);
 		un += rn;
-
-		for ( in = pp; in < un; in++ )
-		{
-			if      ( ex_str3cmp(r + in, "GET") && nw )
-			{
-				nw = 0;
-				rm = HTTP_GET;
-			}
-			else if ( ex_str3cmp(r + in, "PUT") && nw )
-			{
-				nw = 0;
-				rm = HTTP_PUT;
-			}
-			else if ( ex_str4cmp(r + in, "POST") && nw )
-			{
-				nw = 0;
-				rm = HTTP_POST;
-			}
-			else if ( ex_str7cmp(r +in, "OPTIONS") && nw )
-			{
-				nw = 0;
-				rm = HTTP_OPTIONS;
-			}
-			else if ( ex_str6cmp(r +in, "DELETE") && nw )
-			{
-				nw = 0;
-				rm = HTTP_DELETE;
-			}
-
-			if ( nw == 0 )
-			{
-				if ( rm == HTTP_GET )
-				{
-					if ( r[in] != '\r' && r[in] != '\n' )
-					{
-						continue;
-					}
-					if ( r[in] == '\r' && r[in + 1] == '\n' && r[in+2] == '\r' && r[in+3] == '\n')
-					{
-						nw = 1;
-						r[*len] = '\0';
-						return r;
-					}
-				}
-				else
-				{
-					/* Not GET method, need to get the Content-Length */
-					if ( in > un - 13 ) break;
-					if ( ex_str13ncmp(r + in, "content-length") )
-					{
-						bl = ex_get_cl(r, in);
-
-						if ( bl == -1 ) break;
-
-						for ( nl = in; nl < un ; nl++ )
-						{
-							if ( ex_str4cmp( r + nl, "\r\n\r\n") )
-							{
-								ll = un - nl - 4;
-
-								ll = bl - ll;
-								if ( ll == 0 ) {
-									return r;
-								}
-								else
-								{
-									nv = ex_read_num_data(_fd, ll);
-									v  = realloc(r, sizeof(char) * (un + ll));
-									if ( v == NULL)
-									{
-										ex_memfree(r);
-										return NULL;
-									}
-									r = v;
-									*len += ll;
-									ex_copymem(r + un, nv, sizeof(char) * ll);
-									ex_memfree(nv);
-									return r;
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-
-		if ( nw ) {
-			pp += rn;
-		}
+		
+		ll = ex_check_http_stream(r, an);
+		if ( ll == -1 ) continue;
+		
+		if ( ll == 0 ) return r;
+		else
+        {
+            nv = ex_read_num_data( _fd, ll );
+    
+            ex_logger(LOG_ERROR, "[[%s:%d]]", nv, ll);
+            
+            v  = realloc( r, sizeof( char ) * ( an + ll ) );
+            if ( v == NULL )
+            {
+                ex_memfree( r );
+                return NULL;
+            }
+            r = v;
+           *len += ll;
+            ex_copymem( r + un, nv, sizeof( char ) * ll );
+            ex_memfree( nv );
+            return r;
+        }
 	}
 }
 
