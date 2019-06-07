@@ -15,7 +15,7 @@
 多进程、事件机制
 
 - **多进程**  **：** 主进程负责接受新的用户请求，然后发送到各个子进程的事件队列处理
-- **事件机制** ：采用 **epoll** (Linux) 或者 **kqueue** (BSD)系统
+- **事件机制** ：采用 **epoll** (Linux) 或者 **kqueue** (BSD) IO复用
 - **内存占用极低**：在 **Debian9.x** 系统上，每个工作进程占用 88KB，主进程 60KB
 
 ## Exserver 可以做什么？
@@ -29,6 +29,7 @@
 **节点** `system`
 
 - **send_file**  ：**true** 或者 **false** 表示是否使用 sendfile 来完成零 **IO** 复制
+- **daemon**   ：**true** 或者 **false** 表示是否启用后台常驻进程模式 
 
 ##### 节点`server` #####
 
@@ -43,6 +44,7 @@
 {
     // 配置系统参数
     "system": {
+        "daemon": true,
         "send_file": false
     },
     // 配置服务器
@@ -70,9 +72,9 @@ make
 ./sockets
 ```
 
-网页文件采用 **sendfile** 传输，支持的文件格式如下：
+支持的文件格式如下：
 
-| text/html                    | HTML文本文件                  |
+| text/html                    | **HTML文本文件**              |
 | ---------------------------- | ----------------------------- |
 | **text/css**                 | **CSS样式文件**               |
 | **text/xml**                 | **XML文件**                   |
@@ -82,10 +84,10 @@ make
 | **application/json**         | **JSON文件**                  |
 | **text/plain**               | **TXT文件**                   |
 | **image/png**                | **PNG图像文件**               |
-| **video/mp4**                | **MP4文件**                   |
+| **video/mp4**                | **MP4文件**(暂未实现断点续传) |
 | **audio/mpeg**               | **MP3文件**                   |
 | **application/zip**          | **ZIP文件**                   |
-| **application/octet-stream** | **不识别文件 默认返回此格式** |
+| **application/octet-stream** | **其他文件 默认返回此格式**   |
 
 ## 静态网页压测 ##
 

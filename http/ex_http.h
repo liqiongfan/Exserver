@@ -47,6 +47,7 @@ static GLOBAL_VARS SYSTEM  sol_t use_send = 0;
 #define HT_SERVER         "servers"
 #define HT_SYSTEM         "system"
 #define HT_SEND_FILE      "send_file"
+#define HT_DAEMON         "daemon"
 
 #define CONFIG_HOST       "host"    , 4
 #define CONFIG_INDEX      "index"   , 5

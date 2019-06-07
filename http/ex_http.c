@@ -236,8 +236,9 @@ void ex_http_worker(int index, FUNC func)
 
 void ex_http_worker_init(int n, FUNC func)
 {
-    long    l;
-    int     i,  re;
+    long    l,      daemon;
+    int     i,      re;
+    void   *ptr;
     char   *s;
     struct sigaction sig;
     
@@ -265,7 +266,24 @@ void ex_http_worker_init(int n, FUNC func)
     
     if ( csystem )
     {
-        use_send = *(long *)exjson_get_val_from_key(csystem, HT_SEND_FILE);
+        ptr = exjson_get_val_from_key(csystem, HT_SEND_FILE);
+        if ( ptr )
+        {
+            use_send = *(long *)ptr;
+        }
+        
+        ptr   = exjson_get_val_from_key(csystem, HT_DAEMON);
+        
+        if ( ptr )
+        {
+            daemon = *(long *)ptr;
+            if ( daemon )
+            {
+                daemon = fork();
+                if ( daemon )
+                    exit( 0 );
+            }
+        }
     }
     
     for ( i = 0; i < n; ++i )
