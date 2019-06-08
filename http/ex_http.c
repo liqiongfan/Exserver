@@ -30,18 +30,21 @@ static void sigaction_handler(int sig, siginfo_t *si, void *context)
 
 void ex_server_parse(int fd, EX_REQUEST_T *req)
 {
-    int              i,       j,      im,     re,    md;
-    char            *wr,     *sh,    *wi,    *qp,    cm[BUFFER_ALLOCATE_SIZE],    *rv,    mr[BUFFER_ALLOCATE_SIZE];
-    long             sp,      bl;
+    int              i,       j,      im,     re,    md,   cd;
+    char            *wr,     *sh,    *wi,    *qp,   *rv,  *sc,
+                    cm[BUFFER_ALLOCATE_SIZE], mr[BUFFER_ALLOCATE_SIZE], cr[BUFFER_ALLOCATE_SIZE];
+    long             sp,      bl,     from,   to;
+    long  long       cl;
     EX_RESPONSE_T   *res;
     
     EXJSON          *server;
     struct stat      fs;
     
-    sp =  80;
-    bl = im =  0;
-    qp = wr = sh =  NULL;
-    wi = "index.html";
+    sp   =  80;
+    bl   = im =  0;
+    from = to = 0;
+    qp   = wr = sh =  NULL;
+    wi    = "index.html";
     
     for (i = 0; i < E_NUM_P(cservers); ++i)
     {
@@ -126,25 +129,43 @@ void ex_server_parse(int fd, EX_REQUEST_T *req)
     }
     
     sprintf(cm, "Content-Type: %s", ex_get_mine_type(mr));
-    rv = ex_copy_data_from_file(mr, &bl);
+    ex_memzero(cr, sizeof(cr));
+    
+    /* Check whether is mp4 or not */
+    if ( req->range )
+    {
+        ex_parse_range(req->range, &from, &to);
+        
+        if ( to == 0 ) to = fs.st_size - 1;
+        rv = ex_copy_size_data_from_file(mr, from, to);
+        bl = cl = to - from + 1;
+        sc = "Partial Content";
+        cd = 206;
+        sprintf(cr, "Content-Range: bytes %ld-%ld/%lld", from, to, fs.st_size);
+    }
+    else
+    {
+        rv = ex_copy_data_from_file(mr, &bl);
+        cl = fs.st_size;
+        sc = "OK";
+        cd = 200;
+    }
     ex_memzero(mr, sizeof(mr));
     
-#ifdef  __linux__
-    sprintf(mr, "Content-Length: %ld",  fs.st_size);
-#else
-    sprintf(mr, "Content-Length: %lld", fs.st_size);
-#endif
+    sprintf(mr, "Content-Length: %lld", cl);
     
     if ( req->keep_alive )
     {
         res = genereate_response_t(
-            200, "OK", rv, bl, 4, cm, mr, "Connection: keep-alive", "Server: Exserver/1.0"
+            cd, sc, rv, bl,
+            5,  cr, cm, mr, "Connection: keep-alive", "Server: Exserver/1.0"
         );
     }
     else
     {
         res = genereate_response_t(
-            200, "OK", rv, bl, 4, cm, mr, "Connection: close", "Server: Exserver/1.0"
+            cd, sc, rv, bl,
+            5,  cr, cm, mr, "Connection: close", "Server: Exserver/1.0"
         );
     }
     

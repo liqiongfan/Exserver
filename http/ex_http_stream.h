@@ -40,6 +40,7 @@ typedef struct _EX_REQUEST_T
     char    *content_type;
     void    *headers;
     char    *http_body;
+    char    *range; /* This header only for media use. */
     long     http_body_length;
     int      keep_alive;
 } EX_REQUEST_T;
@@ -56,6 +57,7 @@ enum {
 
 #define EX_HOST     "Host"
 #define EX_METHOD   "request_method"
+#define EX_RANGE    "Range"
 #define EX_URL      "request_uri"
 #define EX_VERSION  "http_version"
 #define EX_C_TYPE   "Content-Type"
@@ -78,6 +80,9 @@ void ex_init_request(EX_HTTP_HEADER *, EXLIST_V *, EX_REQUEST_T *);
 EX_RESPONSE_T *genereate_response_t(int code, char *msg, char *body, long body_len, int n, ...);
 char *generate_request_string(char *method, char *url, char *body, long blen, int n, ...);
 
+/* Parse the range header */
+void ex_parse_range(const char *str, long *from, long *to);
+
 /* Some apis for special HTTP status code response */
 void send_500_response(int _fd, int keep);
 void send_404_response(int _fd, int keep);
@@ -88,6 +93,7 @@ char *parse_proc_cmdline(int pid);
 #endif
 
 /* Get the file data */
+char *ex_copy_size_data_from_file(char *file, long from, long to);
 char *ex_copy_data_from_file(char *file, long *len);
 char *get_file_data(char *filename);
 

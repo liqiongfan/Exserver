@@ -229,6 +229,7 @@ EX_RESPONSE_T *genereate_response_t(int code, char *msg, char *body, long body_l
 	{
 		if ( !n-- ) break;
 		hr = va_arg(args, char *);
+		if ( hr[0] == '\0' ) continue;
 		_ex_strncat_(&rs, hr, EX_CON(ts, us));
 		_ex_strncat_(&rs, "\r\n", EX_CON(ts, us));
 	}
@@ -466,6 +467,32 @@ char *ex_copy_data_from_file(char *file, long *size)
 	return r;
 }
 
+char *ex_copy_size_data_from_file(char *file, long from, long to)
+{
+    FILE    *fp;
+    char    *r;
+    long     l;
+    
+    l = to - from + 1;
+    
+    fp = fopen(file, "r");
+    if ( fp == NULL ) return NULL;
+    
+    fseek(fp, from, SEEK_SET);
+    
+    r = malloc( sizeof(char) * l );
+    if ( r == NULL )
+    {
+        fclose(fp);
+        return NULL;
+    }
+    
+    fread(r, sizeof(char), sizeof(char) * l, fp);
+    
+    fclose(fp);
+    return r;
+}
+
 /* Not binary safe */
 char *get_file_data(char *filename)
 {
@@ -491,6 +518,21 @@ char *get_file_data(char *filename)
 	return result;
 }
 
+/* bytes=0-300000 */
+void ex_parse_range(const char *str, long *from, long *to)
+{
+    if ( ex_str6cmp(str, "bytes=") )
+    {
+        *from = strtol(str + 6, NULL, 10);
+    }
+    for ( ;; )
+    {
+        if ( *str++ =='-' )
+            break;
+    }
+    *to = strtol(str, NULL, 10);
+}
+
 void ex_init_request(EX_HTTP_HEADER *header, EXLIST_V *ptr, EX_REQUEST_T *req)
 {
     if ( strncasecmp(HEADER_KEY_P(header), EX_STRL(EX_HOST) ) == 0 )
@@ -500,6 +542,10 @@ void ex_init_request(EX_HTTP_HEADER *header, EXLIST_V *ptr, EX_REQUEST_T *req)
     else if ( strncasecmp(HEADER_KEY_P(header), EX_STRL(EX_METHOD) ) == 0 )
     {
         req->request_method = HEADER_VALUE_P(header);
+    }
+    else if ( strncasecmp(HEADER_KEY_P(header), EX_STRL(EX_RANGE)) == 0 )
+    {
+        req->range = HEADER_VALUE_P(header);
     }
     else if ( strncasecmp(HEADER_KEY_P(header), EX_STRL(EX_URL) ) == 0 )
     {

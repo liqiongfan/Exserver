@@ -193,6 +193,7 @@ long ex_check_http_stream(const char *stream, long stream_len)
                     {
                         return 0;
                     }
+                    else if ( ll < 0 ) break;
                     else
                     {
                         return ll;
