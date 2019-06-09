@@ -41,6 +41,7 @@ typedef struct _EX_REQUEST_T
     void    *headers;
     char    *http_body;
     char    *range; /* This header only for media use. */
+    char    *tag;   /* This header only for media use. */
     long     http_body_length;
     int      keep_alive;
 } EX_REQUEST_T;
@@ -58,6 +59,7 @@ enum {
 #define EX_HOST     "Host"
 #define EX_METHOD   "request_method"
 #define EX_RANGE    "Range"
+#define EX_TAG      "ETag"
 #define EX_URL      "request_uri"
 #define EX_VERSION  "http_version"
 #define EX_C_TYPE   "Content-Type"

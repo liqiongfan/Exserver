@@ -240,7 +240,7 @@ EX_RESPONSE_T *genereate_response_t(int code, char *msg, char *body, long body_l
 
 	res->length = us;
 
-	if ( body && body_len )
+	if ( body_len )
 	{
 		r = realloc( rs, sizeof(char)*(us + body_len) );
 		if ( r == NULL )
@@ -472,13 +472,16 @@ char *ex_copy_size_data_from_file(char *file, long from, long to)
     FILE    *fp;
     char    *r;
     long     l;
+    size_t   u,   a,  e;
     
+    ex_logger(LOG_INFO, "file: %s  from: %d  to: %d", file, from, to);
+    
+    a = 0;
     l = to - from + 1;
+    e = BUFFER_SIZE;
     
     fp = fopen(file, "r");
     if ( fp == NULL ) return NULL;
-    
-    fseek(fp, from, SEEK_SET);
     
     r = malloc( sizeof(char) * l );
     if ( r == NULL )
@@ -487,8 +490,27 @@ char *ex_copy_size_data_from_file(char *file, long from, long to)
         return NULL;
     }
     
-    fread(r, sizeof(char), sizeof(char) * l, fp);
+    for ( ;; )
+    {
+        if ( l == 0 ) break;
+        if ( l >= BUFFER_SIZE )
+        {
+            e = BUFFER_SIZE;
+        }
+        else
+        {
+            e = l;
+        }
+        fseek(fp, from + a, SEEK_SET);
+        u = fread(r + a, sizeof(char), sizeof(char) * e, fp);
+        if ( u > 0 )
+        {
+            a += u;
+            l -= u;
+        }
+    }
     
+    ex_logger(LOG_INFO, "file: %s  return ok: length: %d", file, a);
     fclose(fp);
     return r;
 }
@@ -546,6 +568,11 @@ void ex_init_request(EX_HTTP_HEADER *header, EXLIST_V *ptr, EX_REQUEST_T *req)
     else if ( strncasecmp(HEADER_KEY_P(header), EX_STRL(EX_RANGE)) == 0 )
     {
         req->range = HEADER_VALUE_P(header);
+    }
+    
+    else if ( strncasecmp(HEADER_KEY_P(header), EX_STRL(EX_TAG)) == 0 )
+    {
+        req->tag = HEADER_VALUE_P(header);
     }
     else if ( strncasecmp(HEADER_KEY_P(header), EX_STRL(EX_URL) ) == 0 )
     {

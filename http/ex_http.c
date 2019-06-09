@@ -127,6 +127,7 @@ void ex_server_parse(int fd, EX_REQUEST_T *req)
         close(md);
         return send_404_response(fd, req->keep_alive);
     }
+    close(md);
     
     sprintf(cm, "Content-Type: %s", ex_get_mine_type(mr));
     ex_memzero(cr, sizeof(cr));
@@ -136,12 +137,12 @@ void ex_server_parse(int fd, EX_REQUEST_T *req)
     {
         ex_parse_range(req->range, &from, &to);
         
-        if ( to == 0 ) to = fs.st_size - 1;
-        rv = ex_copy_size_data_from_file(mr, from, to);
-        bl = cl = to - from + 1;
+        if ( to == 0 ) to = fs.st_size;
+        rv = ex_copy_size_data_from_file(mr, from, to - 1);
+        bl = cl = to - from;
         sc = "Partial Content";
         cd = 206;
-        sprintf(cr, "Content-Range: bytes %ld-%ld/%lld", from, to, fs.st_size);
+        sprintf(cr, "Content-Range: bytes %ld-%ld/%lld", from, to - 1, fs.st_size);
     }
     else
     {
@@ -150,8 +151,8 @@ void ex_server_parse(int fd, EX_REQUEST_T *req)
         sc = "OK";
         cd = 200;
     }
-    ex_memzero(mr, sizeof(mr));
     
+    ex_memzero(mr, sizeof(mr));
     sprintf(mr, "Content-Length: %lld", cl);
     
     if ( req->keep_alive )
@@ -169,11 +170,27 @@ void ex_server_parse(int fd, EX_REQUEST_T *req)
         );
     }
     
-    write( fd, res->response, sizeof( char ) * res->length );
+    ssize_t rl = 0;
+    ssize_t llen;
+    for ( ;; )
+    {
+        if ( res->length == 0 ) break;
+        llen = write( fd, res->response + rl, sizeof( char ) * res->length );
+        if ( llen > 0 )
+        {
+            rl          += llen;
+            res->length -= llen;
+        }
+        else if ( llen == -1 )
+        {
+            if ( errno == EAGAIN )
+                continue;
+            break;
+        }
+    }
     ex_memfree(res->response);
     ex_memfree(res);
     ex_memfree(rv);
-    close(md);
 }
 
 void ex_http_loop(int fd, int signo, int efd)

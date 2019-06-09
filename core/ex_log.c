@@ -5,6 +5,7 @@
 #include <ex_log.h>
 #include <ex_string.h>
 
+inline
 void ex_logger(int level, char *info, ...)
 {
 	int _i, sp;
@@ -60,7 +61,7 @@ void ex_logger(int level, char *info, ...)
 							fwrite(&s, sizeof(char), 1, fp);
 							break;
 						default:
-							printf("Unsupported synbol: %c\n", s);
+							printf("Unsupported symbol: %c\n", s);
 							break;
 					}
 					sp = 0;

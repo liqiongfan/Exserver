@@ -25,6 +25,5 @@
 
 void ex_logger(int level, char *info, ...);
 
-
 #endif /* EX_LOG_H */
 

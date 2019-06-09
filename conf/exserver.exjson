@@ -1,7 +1,8 @@
 {
     // 系统配置
 	"system": {
-		"send_file": false
+		"send_file": false,
+		"daemon"   : true
 	},
     // 配置服务器信息
     "servers": [
