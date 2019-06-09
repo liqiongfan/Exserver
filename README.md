@@ -74,20 +74,20 @@ make
 
 支持的文件格式如下：
 
-| text/html                    | **HTML文本文件**              |
-| ---------------------------- | ----------------------------- |
-| **text/css**                 | **CSS样式文件**               |
-| **text/xml**                 | **XML文件**                   |
-| **image/gif**                | **GIF文件**                   |
-| **image/jpeg**               | **JPG 图片**                  |
-| **application/javascript**   | **JavaScript脚本**            |
-| **application/json**         | **JSON文件**                  |
-| **text/plain**               | **TXT文件**                   |
-| **image/png**                | **PNG图像文件**               |
-| **video/mp4**                | **MP4文件**(暂未实现断点续传) |
-| **audio/mpeg**               | **MP3文件**                   |
-| **application/zip**          | **ZIP文件**                   |
-| **application/octet-stream** | **其他文件 默认返回此格式**   |
+| text/html                    | **HTML文本文件**                |
+| ---------------------------- | ------------------------------- |
+| **text/css**                 | **CSS样式文件**                 |
+| **text/xml**                 | **XML文件**                     |
+| **image/gif**                | **GIF文件**                     |
+| **image/jpeg**               | **JPG 图片**                    |
+| **application/javascript**   | **JavaScript脚本**              |
+| **application/json**         | **JSON文件**                    |
+| **text/plain**               | **TXT文件**                     |
+| **image/png**                | **PNG图像文件**                 |
+| **video/mp4**                | **MP4文件**(已实现实现断点续传) |
+| **audio/mpeg**               | **MP3文件**                     |
+| **application/zip**          | **ZIP文件**                     |
+| **application/octet-stream** | **其他文件 默认返回此格式**     |
 
 ## 静态网页压测 ##
 
